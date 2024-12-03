@@ -2,10 +2,10 @@ import * as bodyParser from 'body-parser';
 import * as express from 'express';
 import mongoose from 'mongoose';
 import { IController } from './interfaces/controller.interface';
+import { errorMiddleware } from './middleware/error.middleware';
 
-class App {
+export class App {
   public app: express.Application;
-  public port: number;
 
   constructor(controllers: IController[]) {
     this.app = express();
@@ -13,6 +13,7 @@ class App {
     this.connectToTheDatabase();
     this.initializeMiddlewares();
     this.initializeControllers(controllers);
+    this.initializeErrorHandling();
   }
 
   public listen() {
@@ -23,6 +24,10 @@ class App {
 
   private initializeMiddlewares() {
     this.app.use(bodyParser.json());
+  }
+
+  private initializeErrorHandling() {
+    this.app.use(errorMiddleware);
   }
 
   private initializeControllers(controllers) {
@@ -36,5 +41,3 @@ class App {
     mongoose.connect(`mongodb://${MONGO_USER}:${MONGO_PASSWORD}${MONGO_PATH}`);
   }
 }
-
-export default App;
