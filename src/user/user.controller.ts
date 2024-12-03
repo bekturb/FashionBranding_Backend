@@ -23,6 +23,10 @@ export class UserController implements IController {
     this.router.delete(`${this.path}/:id`, this.deleteUser);
   }
 
+  public getHello = async (req: Request, res: Response) => {
+    res.send('Hello world');
+  };
+
   private getUserById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

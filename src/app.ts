@@ -37,7 +37,8 @@ export class App {
   }
 
   private connectToTheDatabase() {
-    const { MONGO_USER, MONGO_PASSWORD, MONGO_PATH } = process.env;
-    mongoose.connect(`mongodb://${MONGO_USER}:${MONGO_PASSWORD}${MONGO_PATH}`);
+    const { MONGO_PATH } = process.env;
+    mongoose.set('strictQuery', false);
+    mongoose.connect(MONGO_PATH);
   }
 }
