@@ -7,8 +7,8 @@ import { validationMiddleware } from '../middleware/validation.middleware';
 import { CreateUserDto, UpdateUserDto } from './user.dto';
 
 export class UserController implements IController {
-  public path = '/user';
-  public router = Router();
+  public path: string = '/user';
+  public router: Router = Router();
   private user = userModel;
 
   constructor() {
