@@ -1,7 +1,7 @@
 import UserWithThatEmailAlreadyExistsException from "exceptions/UserWithThatEmailAlreadyExistsException";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
-import { UserDto } from "user/user.dto";
+import { CreateUserDto } from "user/user.dto";
 import { userModel } from "user/user.model";
 import TokenData from "interfaces/tokenData.interface";
 import {IUser} from "user/user.interface";
@@ -10,7 +10,7 @@ import DataStoredInToken from "interfaces/dataStoredInToken";
 class AuthenticationService {
   public user = userModel;
 
-  public async register(userData: UserDto) {
+  public async register(userData: CreateUserDto) {
     if (await this.user.findOne({ email: userData.email })) {
       throw new UserWithThatEmailAlreadyExistsException(userData.email);
     }

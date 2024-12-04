@@ -5,8 +5,8 @@ import WrongCredentialsException from '../exceptions/WrongCredentialsException';
 import { IController } from '../interfaces/controller.interface';
 import DataStoredInToken from '../interfaces/dataStoredInToken';
 import TokenData from '../interfaces/tokenData.interface';
-import validationMiddleware from '../middleware/validation.middleware';
-import { UserDto } from '../user/user.dto';
+import {validationMiddleware} from '../middleware/validation.middleware';
+import { CreateUserDto } from '../user/user.dto';
 import { IUser } from '../user/user.interface';
 import { userModel } from '../user/user.model';
 import AuthenticationService from './authentication.service';
@@ -23,13 +23,13 @@ export class UserController {
   }
 
   private initializeRoutes() {
-    this.router.post(`${this.path}/register`, validationMiddleware(UserDto), this.registration);
+    this.router.post(`${this.path}/register`, validationMiddleware(CreateUserDto), this.registration);
     this.router.post(`${this.path}/login`, validationMiddleware(LogInDto), this.loggingIn);
     this.router.post(`${this.path}/logout`, this.loggingOut);
   }
 
   private registration = async (request: Request, response: Response, next: NextFunction) => {
-    const userData: UserDto = request.body;
+    const userData: CreateUserDto = request.body;
     try {
       const {
         cookie,
