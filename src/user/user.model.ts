@@ -9,6 +9,7 @@ const userSchema = new Schema(
       type: String,
       get: (): undefined => undefined,
     },
+    isEmailConfirmed: Boolean,
     role: String,
   },
   {
