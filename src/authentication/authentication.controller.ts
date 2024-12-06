@@ -37,7 +37,7 @@ export class AuthenticationController implements IController {
     this.router.post(`${this.path}/register`, validationMiddleware(CreateUserDto), this.registration);
     this.router.get(`${this.path}/email/verify/:verificationId`, this.firstStepVerify);
     this.router.post(`${this.path}/email/verify`, this.secondStepVerify);
-    // this.router.post(`${this.path}/login`, validationMiddleware(LogInDto), this.loggingIn);
+    this.router.post(`${this.path}/login`, validationMiddleware(LogInDto), this.loggingIn);
     this.router.post(`${this.path}/logout`, this.loggingOut);
   }
 
@@ -96,11 +96,6 @@ export class AuthenticationController implements IController {
     try {
       const { email, otpCode }: { email: string; otpCode: string } = request.body;
 
-      const user = await this.user.findOne({ email });
-      if (!user) {
-        return next(new NotFoundException('User not found with this email'));
-      }
-
       const storedOtp = await this.otp.findOne({ email });
       if (!storedOtp || new Date() > storedOtp.expiresAt) {
         return next(new NotFoundException('Invalid or expired OTP code'));
@@ -109,6 +104,16 @@ export class AuthenticationController implements IController {
       const isValidOtp = bcrypt.compareSync(otpCode, storedOtp.otp);
       if (!isValidOtp) {
         return next(new NotFoundException('Invalid OTP'));
+      }
+
+      const user = await this.user.findOneAndUpdate(
+        { email },
+        { isEmailConfirmed: true },
+        { new: true }
+      );
+  
+      if (!user) {
+        return next(new NotFoundException('User not found'));
       }
 
       const accessToken = this.createAccessToken(user);
@@ -127,31 +132,54 @@ export class AuthenticationController implements IController {
 
       await this.otp.deleteOne({ email });
 
-      response.status(200).send({ accessToken, refreshToken });
+      response.status(200).send({ accessToken, refreshToken, user });
     } catch (error) {
       next(error);
     }
   };
 
-  // private loggingIn = async (request: Request, response: Response, next: NextFunction) => {
-  //   const logInData: LogInDto = request.body;
-  //   const user = await this.user.findOne({ email: logInData.email });
-  //   if (user) {
-  //     const isPasswordMatching = await bcrypt.compare(
-  //       logInData.password,
-  //       user.get('password', null, { getters: false }),
-  //     );
-  //     if (isPasswordMatching) {
-  //       const tokenData = this.createToken(user);
-  //       response.setHeader('Set-Cookie', [this.createCookie(tokenData)]);
-  //       response.send(user);
-  //     } else {
-  //       next(new WrongCredentialsException());
-  //     }
-  //   } else {
-  //     next(new WrongCredentialsException());
-  //   }
-  // }
+  private loggingIn = async (
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const logInData: LogInDto = request.body;
+  
+      // Find user by email
+      const user = await this.user.findOne({ email: logInData.email });
+      if (!user) {
+        return next(new WrongCredentialsException());
+      }
+  
+      if (!user.isEmailConfirmed) {
+        const verificationCode = await this.verificationCodeService.createVerificationCode(user);
+  
+        const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
+        await this.emailService.sendVerificationEmail(user.email, url);
+  
+        return response.status(403).send({
+          message: `User is not verified. A new verification email has been sent to ${user.email}.`,
+        });
+      }
+  
+      const isPasswordMatching = await bcrypt.compare(
+        logInData.password,
+        user.get('password', null, { getters: false })
+      );
+  
+      if (!isPasswordMatching) {
+        return next(new WrongCredentialsException());
+      }
+  
+      // const tokenData = this.createToken(user);
+      // response.setHeader('Set-Cookie', [this.createCookie(tokenData)]);
+  
+      response.status(200).send(user);
+    } catch (error) {
+      next(error);
+    }
+  };
 
   private loggingOut = (request: Request, response: Response) => {
     response.setHeader('Set-Cookie', ['Authorization=;Max-age=0']);
