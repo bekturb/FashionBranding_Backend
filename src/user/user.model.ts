@@ -3,8 +3,14 @@ import { IUser } from './user.interface';
 
 const userSchema = new Schema(
   {
-    username: String,
-    email: String,
+    username: {
+      type: String,
+      unique: true,
+    },
+    email: {
+      type: String,
+      unique: true,
+    },
     password: {
       type: String,
       get: (): undefined => undefined,
@@ -20,6 +26,7 @@ const userSchema = new Schema(
       virtuals: true,
       getters: true,
     },
+    timestamps: true,
   },
 );
 
