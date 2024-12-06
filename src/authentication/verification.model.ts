@@ -13,6 +13,8 @@ const verificationCodeSchema = new Schema<IVerificationCode>({
   expiresAt: { type: Date, required: true },
 });
 
+verificationCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 const verificationCodeModel = model<IVerificationCode>(
   "VerificationCode",
   verificationCodeSchema,

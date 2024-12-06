@@ -1,10 +1,6 @@
 import UserWithThatEmailAlreadyExistsException from "../exceptions/UserWithThatEmailAlreadyExistsException";
 import * as bcrypt from "bcrypt";
-import * as jwt from "jsonwebtoken";
 import { CreateUserDto } from "../user/user.dto";
-import TokenData from "../interfaces/tokenData.interface";
-import DataStoredInToken from "../interfaces/dataStoredInToken";
-import { IUser } from "../user/user.interface";
 import VerificationCodeService from "./verifications.service";
 import { userModel } from "../user/user.model";
 import EmailService from "./email.service";
