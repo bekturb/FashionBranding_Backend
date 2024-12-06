@@ -1,14 +1,19 @@
-import UserWithThatEmailAlreadyExistsException from "exceptions/UserWithThatEmailAlreadyExistsException";
+import UserWithThatEmailAlreadyExistsException from "../exceptions/UserWithThatEmailAlreadyExistsException";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
-import { CreateUserDto } from "user/user.dto";
-import { userModel } from "user/user.model";
-import TokenData from "interfaces/tokenData.interface";
-import {IUser} from "user/user.interface";
-import DataStoredInToken from "interfaces/dataStoredInToken";
+import { CreateUserDto } from "../user/user.dto";
+import TokenData from "../interfaces/tokenData.interface";
+import DataStoredInToken from "../interfaces/dataStoredInToken";
+import { IUser } from "../user/user.interface";
+import VerificationCodeService from "./verifications.service";
+import { userModel } from "../user/user.model";
+import EmailService from "./email.service";
 
 class AuthenticationService {
   public user = userModel;
+  private verificationCodeService = new VerificationCodeService()
+  private emailService = new EmailService();
+  public 
 
   public async register(userData: CreateUserDto) {
     if (await this.user.findOne({ email: userData.email })) {
@@ -19,25 +24,14 @@ class AuthenticationService {
       ...userData,
       password: hashedPassword,
     });
-    const tokenData = this.createToken(user);
-    const cookie = this.createCookie(tokenData);
+
+    const verificationCode = await this.verificationCodeService.createVerificationCode(user)
+
+    const url = `${process.env.APP_URL}auth/email/verify/${verificationCode._id}`;
+
+    await this.emailService.sendVerificationEmail(user.email, url);
     return {
-      cookie,
       user,
-    };
-  }
-  public createCookie(tokenData: TokenData) {
-    return `Authorization=${tokenData.token}; HttpOnly; Max-Age=${tokenData.expiresIn}`;
-  }
-  public createToken(user: IUser): TokenData {
-    const expiresIn = 60 * 60;
-    const secret = process.env.JWT_SECRET;
-    const dataStoredInToken: DataStoredInToken = {
-      _id: user._id,
-    };
-    return {
-      expiresIn,
-      token: jwt.sign(dataStoredInToken, secret, { expiresIn }),
     };
   }
 }
