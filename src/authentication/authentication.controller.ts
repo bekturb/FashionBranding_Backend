@@ -1,13 +1,9 @@
 import * as bcrypt from "bcrypt";
-import * as jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose, { Error } from "mongoose";
 import { Request, Response, NextFunction, Router } from "express";
 import { IController } from "../interfaces/controller.interface";
-import DataStoredInToken from "../interfaces/dataStoredInToken";
-import TokenData from "../interfaces/tokenData.interface";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateUserDto } from "../user/user.dto";
-import { IUser } from "../user/user.interface";
 import { userModel } from "../user/user.model";
 import AuthenticationService from "./authentication.service";
 import { LogInDto } from "./login.dto";
@@ -18,6 +14,8 @@ import { UserNotFoundException } from "../exceptions/userNotFound.exception";
 import VerificationsService from "./verifications.service";
 import EmailService from "./email.service";
 import WrongCredentialsException from "../exceptions/WrongCredentialsException";
+import TokenManager from "../utils/jwt";
+import CookiesManager from "../utils/cookies";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -25,6 +23,8 @@ export class AuthenticationController implements IController {
   public authenticationService = new AuthenticationService();
   public verificationService = new VerificationsService();
   private emailService = new EmailService();
+  private tokenManager = new TokenManager();
+  private cookiesManager = new CookiesManager();
   private user = userModel;
   private verificationCode = verificationCodeModel;
   private otp = otpCodeModel;
@@ -117,7 +117,8 @@ export class AuthenticationController implements IController {
     next: NextFunction
   ) => {
     try {
-      const { email, otpCode }: { email: string; otpCode: string } = request.body;
+      const { email, otpCode }: { email: string; otpCode: string } =
+        request.body;
 
       const storedOtp = await this.otp.findOne({ email });
       if (!storedOtp || new Date() > storedOtp.expiresAt) {
@@ -138,22 +139,24 @@ export class AuthenticationController implements IController {
       if (!user) {
         return next(new NotFoundException("User not found"));
       }
+      const refreshToken = this.tokenManager.signToken(
+        {
+          userId: user._id,
+        },
+        this.tokenManager.refreshTokenSignOptions
+      );
 
-      const accessToken = this.createAccessToken(user);
-      const refreshToken = this.createRefreshToken(user);
-
-      response.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-      });
-      response.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+      const accessToken = this.tokenManager.signToken({
+        userId: user._id,
       });
 
       await this.otp.deleteOne({ email });
+
+      this.cookiesManager.setAuthCookies({
+        response,
+        accessToken,
+        refreshToken,
+      });
 
       response.status(200).send({ accessToken, refreshToken, user });
     } catch (error) {
@@ -169,80 +172,84 @@ export class AuthenticationController implements IController {
     try {
       const logInData: LogInDto = request.body;
       const user = await this.user.findOne({ email: logInData.email });
-  
+
       if (!user) {
         next(new WrongCredentialsException());
         return;
       }
-  
+
       if (!user.isEmailConfirmed) {
-        const verificationCode = await this.verificationService.createVerificationCode(user);
+        const verificationCode =
+          await this.verificationService.createVerificationCode(user);
         const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
-        
+
         await this.emailService.sendVerificationEmail(user.email, url);
-  
+
         response.status(403).send({
           message: `User is not verified. A new verification email has been sent to ${user.email}.`,
         });
         return;
       }
-  
+
       const isPasswordMatching = await bcrypt.compare(
         logInData.password,
-        user.get('password', null, { getters: false })
+        user.get("password", null, { getters: false })
       );
-  
+
       if (!isPasswordMatching) {
-        next(new NotFoundException('Incorrect password. Please try again.'));
+        next(new NotFoundException("Incorrect password. Please try again."));
         return;
       }
-  
-      const accessToken = this.createAccessToken(user);
-      const refreshToken = this.createRefreshToken(user);
-  
-      response.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
+
+      const refreshToken = this.tokenManager.signToken(
+        {
+          userId: user._id,
+        },
+        this.tokenManager.refreshTokenSignOptions
+      );
+
+      const accessToken = this.tokenManager.signToken({
+        userId: user._id,
       });
-      response.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
+
+      this.cookiesManager.setAuthCookies({
+        response,
+        accessToken,
+        refreshToken,
       });
-  
+
       response.status(200).send({ accessToken, refreshToken, user });
     } catch (error) {
       next(error);
     }
   };
 
-  private loggingOut = (request: Request, response: Response) => {
-    response.setHeader("Set-Cookie", ["Authorization=;Max-age=0"]);
-    response.send(200);
+  private loggingOut = (
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ) => {
+    try {
+      this.cookiesManager.clearAuthCookies(response)
+      response.status(200).send({ message: "Logout successful" });
+    } catch (error) {
+      next(error);
+    }
   };
 
-  public createAccessToken(user: IUser): TokenData {
-    const expiresIn = 60 * 15;
-    const secret = process.env.JWT_SECRET;
-    const dataStoredInToken: DataStoredInToken = {
-      _id: user._id,
-    };
-    return {
-      expiresIn,
-      token: jwt.sign(dataStoredInToken, secret, { expiresIn }),
-    };
-  }
+  private refreshToken = async (
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const refreshToken = request.cookies.refreshToken as string | undefined;
 
-  public createRefreshToken(user: IUser): TokenData {
-    const expiresIn = 60 * 60 * 24 * 7;
-    const secret = process.env.JWT_SECRET;
-    const dataStoredInToken: DataStoredInToken = {
-      _id: user._id,
-    };
-    return {
-      expiresIn,
-      token: jwt.sign(dataStoredInToken, secret, { expiresIn }),
-    };
-  }
+      if (!refreshToken) {
+        return next(new NotFoundException("Refresh token is missing."));
+      }
+    } catch (error) {
+      next(Error);
+    }
+  };
 }
