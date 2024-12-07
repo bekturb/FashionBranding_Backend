@@ -10,7 +10,7 @@ const DEFAULT_COOKIE_OPTIONS: CookieOptions = {
 };
 
 type AuthCookiesParams = {
-response: Response;
+  response: Response;
   accessToken: string;
   refreshToken: string;
 };

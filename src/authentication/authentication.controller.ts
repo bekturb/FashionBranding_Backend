@@ -16,6 +16,7 @@ import EmailService from "./email.service";
 import WrongCredentialsException from "../exceptions/WrongCredentialsException";
 import TokenManager from "../utils/jwt";
 import CookiesManager from "../utils/cookies";
+import DataStoredInToken from "interfaces/dataStoredInToken";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -49,6 +50,7 @@ export class AuthenticationController implements IController {
       validationMiddleware(LogInDto),
       this.loggingIn
     );
+    this.router.get(`${this.path}/refresh`, this.refreshToken);
     this.router.post(`${this.path}/logout`, this.loggingOut);
   }
 
@@ -248,6 +250,47 @@ export class AuthenticationController implements IController {
       if (!refreshToken) {
         return next(new NotFoundException("Refresh token is missing."));
       }
+
+      const { payload, error } = this.tokenManager.verifyToken<DataStoredInToken>(refreshToken, {
+        secret: this.tokenManager.refreshTokenSignOptions.secret,
+      });
+
+      if (error) {
+        return next(new NotFoundException("Invalid or expired refresh token."))
+      }
+
+      if (!payload) {
+        return next(new NotFoundException("Invalid token payload."))
+      }
+
+      const userId = payload.userId;
+      const user = await this.user.findById(userId);
+      if (!user) {
+        return next(new UserNotFoundException(userId));
+      }
+
+      const newAccessToken = this.tokenManager.signToken(
+        { userId: user._id },
+        this.tokenManager.accessTokenSignOptions
+      )
+
+      const newRefreshToken = this.tokenManager.signToken(
+        { userId: user._id },
+        this.tokenManager.refreshTokenSignOptions
+      );
+
+      this.cookiesManager.setAuthCookies({
+        response,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
+  
+      response.status(200).send({
+        message: "Tokens refreshed successfully.",
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
+      
     } catch (error) {
       next(Error);
     }
