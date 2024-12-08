@@ -45,7 +45,7 @@ export class UserController implements IController {
 
   private getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const users = await this.user.find();
+      const users = await this.user.find().select("+password");
       res.send(users);
     } catch (err) {
       next(err);

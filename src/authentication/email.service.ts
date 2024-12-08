@@ -1,3 +1,4 @@
+import { InternalServerErrorException } from "../exceptions/internalServerError.exception";
 import * as nodemailer from "nodemailer";
 import { Transporter } from "nodemailer";
 
@@ -30,10 +31,10 @@ class EmailService {
         html: emailContent,
       });
 
-      console.log(`Verification email sent to ${email}`);
     } catch (error) {
-      console.error(`Failed to send verification email to ${email}:`, error);
-      throw new Error("Failed to send verification email");
+      throw new InternalServerErrorException(
+        `Failed to send verification email to ${email}. Please try again.`
+      );
     }
   }
 
@@ -51,7 +52,29 @@ class EmailService {
         html: emailContent,
       });
     } catch (error) {
-      throw new Error("Failed to send verification email");
+      throw new InternalServerErrorException(
+        `Failed to send verification email to ${email}. Please try again.`
+      );
+    }
+  }
+
+  public async sendResetPassworUrl(
+    email: string,
+    verificationLink: string
+  ): Promise<void> {
+    try {
+      const emailContent = this.getResetPasswordContent(verificationLink);
+
+      await this.transporter.sendMail({
+        from: '"Your App Name" <no-reply@yourapp.com>',
+        to: email,
+        subject: "Email Verification Otp Code",
+        html: emailContent,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to send verification email to ${email}. Please try again.`
+      );
     }
   }
 
@@ -60,6 +83,26 @@ class EmailService {
           <div style="font-family: Arial, sans-serif; line-height: 1.5; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
             <h2 style="color: #007bff;">Welcome to Our App!</h2>
             <p>Please verify your email by clicking the button below:</p>
+            <a href="${verificationLink}" style="
+              display: inline-block; 
+              padding: 10px 20px; 
+              color: #fff; 
+              background-color: #007bff; 
+              text-decoration: none; 
+              border-radius: 5px;
+            ">Verify Email</a>
+            <p style="margin-top: 20px;">If the button above doesn't work, copy and paste this link into your browser:</p>
+            <p><a href="${verificationLink}" style="color: #007bff;">${verificationLink}</a></p>
+            <p>Thank you for joining us!</p>
+          </div>
+        `;
+  }
+
+  private getResetPasswordContent(verificationLink: string): string {
+    return `
+          <div style="font-family: Arial, sans-serif; line-height: 1.5; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #007bff;">Welcome to Our App!</h2>
+            <p>Please reset your password by clicking the button below:</p>
             <a href="${verificationLink}" style="
               display: inline-block; 
               padding: 10px 20px; 
