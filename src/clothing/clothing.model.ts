@@ -8,16 +8,11 @@ const clothingSchema = new Schema(
       required: true,
     },
     image: String,
-    status: {
-      type: String,
-      required: true,
-    },
     category: {
       type: String,
       required: true,
     },
     material: String,
-    modelName: String,
     description: String,
     creatorId: {
       type: Object, //mongoose.Schema.Types.ObjectId,

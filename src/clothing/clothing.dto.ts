@@ -12,19 +12,11 @@ export class CreateClothingDto {
 
   @IsString()
   @IsNotEmpty()
-  public status: string;
-
-  @IsString()
-  @IsNotEmpty()
   public category: string;
 
   @IsString()
   @IsNotEmpty()
   public material: string;
-
-  @IsString()
-  @IsNotEmpty()
-  public modelName: string;
 
   @IsString()
   @IsNotEmpty()
@@ -35,17 +27,12 @@ export class UpdateClothingDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
-  public clothingName: string;
+  public name: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
   public image: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  public status: string;
 
   @IsString()
   @IsNotEmpty()
@@ -56,11 +43,6 @@ export class UpdateClothingDto {
   @IsNotEmpty()
   @IsOptional()
   public material: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  public modelName: string;
 
   @IsString()
   @IsNotEmpty()

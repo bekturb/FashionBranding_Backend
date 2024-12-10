@@ -37,7 +37,7 @@ export class ClothingController implements IController {
       const doc = await this.clothing.findById(id);
 
       if (!doc) {
-        res.status(404).json({ message: 'Clothing not found' });
+        next(ClothingNotFoundException);
       } else {
         res.status(200).json(doc);
       }
@@ -52,12 +52,27 @@ export class ClothingController implements IController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const clothings = await this.clothing.find();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const skip = (page - 1) * limit;
 
-      if (!clothings) {
-        res.status(404).json({ message: 'Clothing not found' });
+      const [clothings, total] = await Promise.all([
+        this.clothing.find().skip(skip).limit(limit),
+        this.clothing.countDocuments(),
+      ]);
+
+      if (!clothings || clothings.length === 0) {
+        next(ClothingNotFoundException);
       } else {
-        res.status(200).json(clothings);
+        res.status(200).json({
+          data: clothings,
+          meta: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+          },
+        });
       }
     } catch (err) {
       next(err);
@@ -90,7 +105,7 @@ export class ClothingController implements IController {
       const updatedClothing = await this.clothing.findByIdAndUpdate(id);
 
       if (!updatedClothing) {
-        res.status(404).json({ message: 'Clothing not found' });
+        next(ClothingNotFoundException);
       } else {
         res.status(200).json(updatedClothing);
       }
@@ -107,7 +122,7 @@ export class ClothingController implements IController {
       const { id } = req.params;
       const deletedClothing = await this.clothing.findByIdAndDelete(id);
       if (!deletedClothing) {
-        res.status(404).json({ message: 'Clothing not found' });
+        next(ClothingNotFoundException);
       } else {
         res.status(200).json();
       }
