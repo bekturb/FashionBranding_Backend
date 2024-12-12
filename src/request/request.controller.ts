@@ -7,13 +7,11 @@ import { IController } from "../interfaces/controller.interface";
 import { IRequestsQuery } from "interfaces/requestsQuery.interface";
 import { IRequest } from "./request.interface";
 import { ApplicationRequestNotFoundException } from "../exceptions/applicationRequestNotFound.exception";
-import { notificationModel } from "../notification/notification.model";
 
 export class RequestController implements IController {
   public path: string = "/request";
   public router: Router = Router();
   private request = requestModel;
-  private notification = notificationModel;
 
   constructor() {
     this.initializeRoutes();
@@ -39,13 +37,6 @@ export class RequestController implements IController {
 
       const request = new this.request(requestData);
       await request.save();
-
-      const notificationData = {
-        name: requestData.name,
-        type: requestData.type,
-      };
-      const notification = new this.notification(notificationData);
-      await notification.save();
 
       res.status(201).send(request);
     } catch (err) {
