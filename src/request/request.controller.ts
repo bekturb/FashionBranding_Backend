@@ -1,17 +1,19 @@
 import { FilterQuery } from "mongoose";
 import { NextFunction, Request, Response, Router } from "express";
-import { RequestModel } from "./request.model";
+import { requestModel } from "./request.model";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateRequestDto } from "./request.dto";
 import { IController } from "../interfaces/controller.interface";
 import { IRequestsQuery } from "interfaces/requestsQuery.interface";
 import { IRequest } from "./request.interface";
 import { ApplicationRequestNotFoundException } from "../exceptions/applicationRequestNotFound.exception";
+import { notificationModel } from "../notification/notification.model";
 
 export class RequestController implements IController {
   public path: string = "/request";
   public router: Router = Router();
-  private request = RequestModel;
+  private request = requestModel;
+  private notification = notificationModel;
 
   constructor() {
     this.initializeRoutes();
@@ -24,7 +26,7 @@ export class RequestController implements IController {
       this.createRequest
     );
     this.router.get(this.path, this.getAllRequests);
-    this.router.get(`${this.path}/:id`, this.getRequestById)
+    this.router.get(`${this.path}/:id`, this.getRequestById);
   }
 
   private createRequest = async (
@@ -37,6 +39,13 @@ export class RequestController implements IController {
 
       const request = new this.request(requestData);
       await request.save();
+
+      const notificationData = {
+        name: requestData.name,
+        type: requestData.type,
+      };
+      const notification = new this.notification(notificationData);
+      await notification.save();
 
       res.status(201).send(request);
     } catch (err) {
@@ -53,21 +62,30 @@ export class RequestController implements IController {
       const page = Math.max(parseInt(req.query.page || "1", 10), 1);
       const limit = Math.max(parseInt(req.query.limit || "10", 10), 1);
       const search = req.query.search?.trim() || "";
-      const startDate = req.query.startDate ? new Date(req.query.startDate) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate) : undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate)
+        : undefined;
       const type = req.query.type;
       const skip = (page - 1) * limit;
-  
+
       const filterQuery: FilterQuery<IRequest> = {};
-  
+
       if (search) {
         filterQuery.$or = [
           { name: { $regex: search, $options: "i" } },
           { phoneNumber: { $regex: search, $options: "i" } },
         ];
       }
-  
-      if (startDate && !isNaN(startDate.getTime()) && endDate && !isNaN(endDate.getTime())) {
+
+      if (
+        startDate &&
+        !isNaN(startDate.getTime()) &&
+        endDate &&
+        !isNaN(endDate.getTime())
+      ) {
         filterQuery.createdAt = {
           $gte: startDate,
           $lte: new Date(endDate.setHours(23, 59, 59, 999)),
@@ -75,26 +93,32 @@ export class RequestController implements IController {
       } else if (startDate && !isNaN(startDate.getTime())) {
         filterQuery.createdAt = { $gte: startDate };
       } else if (endDate && !isNaN(endDate.getTime())) {
-        filterQuery.createdAt = { $lte: new Date(endDate.setHours(23, 59, 59, 999)) };
+        filterQuery.createdAt = {
+          $lte: new Date(endDate.setHours(23, 59, 59, 999)),
+        };
       }
-  
+
       if (type) {
         filterQuery.type = type;
       }
-  
+
       const requests = await this.request
         .find(filterQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
-  
+
       res.status(200).send(requests);
     } catch (error) {
       next(error);
     }
   };
 
-  private getRequestById = async (req: Request, res: Response, next: NextFunction) => {
+  private getRequestById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { id } = req.params;
 

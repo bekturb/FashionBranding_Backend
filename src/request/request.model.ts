@@ -18,6 +18,11 @@ const RequestSchema = new Schema<IRequest>({
     required: true,
   },
 
+  seen: {
+    type: Boolean,
+    default: false,
+  },
+
   createdAt: {
     type: Date,
     required: true,
@@ -25,7 +30,7 @@ const RequestSchema = new Schema<IRequest>({
   },
 });
 
-export const RequestModel = model<IRequest>(
+export const requestModel = model<IRequest>(
   "RequestCode",
   RequestSchema,
   "request_codes"
