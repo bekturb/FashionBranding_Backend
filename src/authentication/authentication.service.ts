@@ -100,7 +100,7 @@ class AuthenticationService {
       { isEmailConfirmed: true },
       { new: true }
     );
-
+   
     if (!user) {
       next(new NotFoundException("User not found"));
     }

@@ -11,23 +11,20 @@ const DEFAULT_COOKIE_OPTIONS: CookieOptions = {
 
 type AuthCookiesParams = {
   response: Response;
-  accessToken: string;
   refreshToken: string;
 };
 
 class CookiesManager {
 
   public setAuthCookies(params: AuthCookiesParams): void {
-    const { response, accessToken, refreshToken } = params;
+    const { response, refreshToken } = params;
 
     response
-      .cookie("accessToken", accessToken, this.getAccessTokenCookieOptions())
       .cookie("refreshToken", refreshToken, this.getRefreshTokenCookieOptions());
   }
 
   public clearAuthCookies(response: Response): void {
     response
-      .clearCookie("accessToken")
       .clearCookie("refreshToken", { path: REFRESH_PATH });
   }
 

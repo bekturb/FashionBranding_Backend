@@ -107,11 +107,10 @@ export class AuthenticationController implements IController {
 
       this.cookiesManager.setAuthCookies({
         response,
-        accessToken,
         refreshToken,
       });
 
-      response.status(200).send({ accessToken, refreshToken, user });
+      response.status(200).send({ accessToken, user });
     } catch (error) {
       next(error);
     }
@@ -130,11 +129,10 @@ export class AuthenticationController implements IController {
 
       this.cookiesManager.setAuthCookies({
         response,
-        accessToken,
         refreshToken,
       });
 
-      response.status(200).send({ accessToken, refreshToken, user });
+      response.status(200).send({ accessToken, user });
     } catch (error) {
       next(error);
     }
@@ -165,7 +163,6 @@ export class AuthenticationController implements IController {
 
       this.cookiesManager.setAuthCookies({
         response,
-        accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       });
 
