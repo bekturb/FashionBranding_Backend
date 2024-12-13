@@ -25,6 +25,7 @@ export class RequestController implements IController {
     this.router.get(this.path, this.getAllRequests);
     this.router.get(`${this.path}/:id`, this.getRequestById);
     this.router.delete(`${this.path}/:id`, this.deleteRequest);
+    this.router.put(`${this.path}/:id/seen`, this.updateSeenStatus);
   }
 
   private createRequest = async (
@@ -50,8 +51,7 @@ export class RequestController implements IController {
     next: NextFunction
   ) => {
     try {
-
-      const queryBuilder = new QueryBuilder(req.query)
+      const queryBuilder = new QueryBuilder(req.query);
 
       const skip = queryBuilder.getSkip();
       const limit = queryBuilder.getLimit();
@@ -80,7 +80,7 @@ export class RequestController implements IController {
       const request = await this.request.findById(id);
 
       if (!request) {
-        return next(new ApplicationRequestNotFoundException(id));
+        next(new ApplicationRequestNotFoundException(id));
       }
 
       res.send(request);
@@ -100,12 +100,36 @@ export class RequestController implements IController {
       const request = await this.request.findByIdAndDelete(id);
 
       if (!request) {
-        return next(new ApplicationRequestNotFoundException(id));
+        next(new ApplicationRequestNotFoundException(id));
       }
-      
+
       res.status(204).send(request);
     } catch (err) {
       next(err);
+    }
+  };
+
+  private updateSeenStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+      
+      const request = await this.request.findByIdAndUpdate(id, {
+        seen: true,
+      });
+
+      console.log(request, "id");
+
+      if (!request) {
+        next(new ApplicationRequestNotFoundException(id));
+      }
+
+      res.status(200).send({message: "Updated successfully"});
+    } catch (error) {
+      next(error)
     }
   };
 }
