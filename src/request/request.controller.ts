@@ -24,6 +24,7 @@ export class RequestController implements IController {
     );
     this.router.get(this.path, this.getAllRequests);
     this.router.get(`${this.path}/:id`, this.getRequestById);
+    this.router.delete(`${this.path}/:id`, this.deleteRequest);
   }
 
   private createRequest = async (
@@ -83,6 +84,26 @@ export class RequestController implements IController {
       }
 
       res.send(request);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  private deleteRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+
+      const request = await this.request.findByIdAndDelete(id);
+
+      if (!request) {
+        return next(new ApplicationRequestNotFoundException(id));
+      }
+      
+      res.status(204).send(request);
     } catch (err) {
       next(err);
     }
