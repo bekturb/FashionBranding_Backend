@@ -1,5 +1,5 @@
-import { Document, model, Schema } from 'mongoose';
-import { IUser } from './user.interface';
+import { Document, model, Schema } from "mongoose";
+import { IUser } from "./user.interface";
 
 const userSchema = new Schema(
   {
@@ -15,8 +15,18 @@ const userSchema = new Schema(
       type: String,
       get: (): undefined => undefined,
     },
+    image: {
+      type: String,
+    },
     isEmailConfirmed: Boolean,
-    role: String,
+    position: {
+      type: String,
+      default: "Employee",
+    },
+    role: {
+      type: String,
+      default: "Guest",
+    },
   },
   {
     toJSON: {
@@ -24,7 +34,7 @@ const userSchema = new Schema(
       getters: true,
     },
     timestamps: true,
-  },
+  }
 );
 
-export const userModel = model<IUser & Document>('User', userSchema);
+export const userModel = model<IUser & Document>("User", userSchema);

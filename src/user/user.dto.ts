@@ -15,20 +15,29 @@ export class CreateUserDto {
   public password: string;
 }
 
+export class UpdateUserPositionDto {
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+
+  @IsString()
+  @IsNotEmpty()
+  position: string;
+}
+
 export class UpdateUserDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
   username?: string;
 
-  @IsEmail()
+  @IsString()
   @IsNotEmpty()
   @IsOptional()
-  email?: string;
+  image?: string;
 
   @IsString()
   @IsNotEmpty()
   @IsOptional()
-  @MinLength(7)
-  password?: string;
+  position?: string;
 }

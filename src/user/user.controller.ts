@@ -2,9 +2,9 @@ import { NextFunction, Request, Response, Router } from 'express';
 import { userModel } from './user.model';
 import { UserNotFoundException } from '../exceptions/userNotFound.exception';
 import { IController } from '../interfaces/controller.interface';
-import { IUser } from './user.interface';
+import { IAdminPosition, IUser } from './user.interface';
 import { validationMiddleware } from '../middleware/validation.middleware';
-import { CreateUserDto, UpdateUserDto } from './user.dto';
+import { UpdateUserDto, UpdateUserPositionDto } from './user.dto';
 
 export class UserController implements IController {
   public path: string = '/user';
@@ -18,14 +18,10 @@ export class UserController implements IController {
   public initializeRoutes() {
     this.router.get(`${this.path}/:id`, this.getUserById);
     this.router.get(this.path, this.getAllUsers);
-    this.router.post(this.path, validationMiddleware(CreateUserDto), this.createUser);
-    this.router.patch(`${this.path}/:id`, validationMiddleware(UpdateUserDto), this.updateUser);
+    this.router.put(`${this.path}/:id/select/admin`, validationMiddleware(UpdateUserPositionDto), this.createAdmin);
+    this.router.put(`${this.path}/:id`, validationMiddleware(UpdateUserDto), this.updateUser);
     this.router.delete(`${this.path}/:id`, this.deleteUser);
   }
-
-  public getHello = async (req: Request, res: Response) => {
-    res.send('Hello world');
-  };
 
   private getUserById = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -52,13 +48,20 @@ export class UserController implements IController {
     }
   };
 
-  private createUser = async (req: Request, res: Response, next: NextFunction) => {
+  private createAdmin = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userData: IUser = req.body;
-      const newUser = new userModel(userData);
-      await newUser.save();
+      const { id } = req.params;
+      const userData: IAdminPosition = req.body;
 
-      res.status(201).send(newUser);
+      console.log(userData, "userData");
+      
+
+      const updatedUser = await this.user.findByIdAndUpdate(id, userData, { new: true });
+
+      if (!updatedUser) {
+        return next(new UserNotFoundException(id));
+      }
+      res.send(updatedUser);
     } catch (err) {
       next(err);
     }
