@@ -8,7 +8,10 @@ export function validationMiddleware<T>(type: any): RequestHandler {
     validate(plainToInstance(type, req.body)).then((errors: ValidationError[]) => {
       if (errors.length > 0) {
         const message = errors
-          .map((error: ValidationError) => Object.values(error.constraints))
+          .map((error: ValidationError) =>
+            error.constraints ? Object.values(error.constraints).join(', ') : '',
+          )
+          .filter((msg) => msg !== '') // Убираем пустые строки
           .join(', ');
         next(new HttpException(400, message));
       } else {
