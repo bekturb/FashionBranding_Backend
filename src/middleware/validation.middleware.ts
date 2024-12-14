@@ -11,7 +11,7 @@ export function validationMiddleware<T>(type: any): RequestHandler {
           .map((error: ValidationError) =>
             error.constraints ? Object.values(error.constraints).join(', ') : '',
           )
-          .filter((msg) => msg !== '') // Убираем пустые строки
+          .filter((msg) => msg !== '')
           .join(', ');
         next(new HttpException(400, message));
       } else {
