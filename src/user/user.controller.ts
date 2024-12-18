@@ -140,7 +140,7 @@ export class UserController implements IController {
 
   /**
  * @swagger
- * /users/{id}/select/admin:
+ * /users/{id}:
  *   put:
  *     summary: Promote a user to admin
  *     tags:
@@ -161,10 +161,14 @@ export class UserController implements IController {
  *           schema:
  *             type: object
  *             properties:
- *               role:
+ *               username:
  *                 type: string
- *                 example: admin
- *                 description: The role to assign to the user.
+ *                 example: Bektursun
+ *                 description: The name of the user.
+ *               image:
+ *                 type: string
+ *                 example: https://cdn.example.com/images/photo.jpg.
+ *                 description: The image of the user.
  *     responses:
  *       200:
  *         description: User promoted to admin successfully.
@@ -188,6 +192,10 @@ export class UserController implements IController {
  *                   type: string
  *                   example: admin
  *                   description: The updated role of the user.
+ *                 image:
+ *                   type: string
+ *                   example: https://cdn.example.com/images/photo.jpg.
+ *                   description: The image of the user.
  *       400:
  *         description: Invalid input or missing parameters.
  *       404:
@@ -216,6 +224,39 @@ export class UserController implements IController {
       next(err);
     }
   };
+  
+ /**
+ * @swagger
+ * /users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     tags:
+ *       - Users
+ *     description: Deletes a user by their unique ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The unique identifier of the user to delete.
+ *         schema:
+ *           type: string
+ *           example: 64b2f0c7e11a4e6d8b16a8e2
+ *     responses:
+ *       200:
+ *         description: User deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User deleted successfully.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Internal server error.
+ */
 
   private deleteUser = async (
     req: Request,
