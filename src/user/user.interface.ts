@@ -10,7 +10,6 @@ export interface IUser extends IAdminPosition {
   username: string;
   email: string;
   image: string;
-  position: string;
   password: string;
   isEmailConfirmed: boolean;
   role: UserRole;

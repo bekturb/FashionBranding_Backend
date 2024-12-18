@@ -15,16 +15,6 @@ export class CreateUserDto {
   public password: string;
 }
 
-export class UpdateUserPositionDto {
-  @IsString()
-  @IsNotEmpty()
-  role: string;
-
-  @IsString()
-  @IsNotEmpty()
-  position: string;
-}
-
 export class UpdateUserDto {
   @IsString()
   @IsNotEmpty()
@@ -35,9 +25,4 @@ export class UpdateUserDto {
   @IsNotEmpty()
   @IsOptional()
   image?: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  position?: string;
 }

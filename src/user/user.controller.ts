@@ -2,9 +2,9 @@ import { NextFunction, Request, Response, Router } from "express";
 import { userModel } from "./user.model";
 import { UserNotFoundException } from "../exceptions/userNotFound.exception";
 import { IController } from "../interfaces/controller.interface";
-import { IAdminPosition, IUser } from "./user.interface";
+import { IUser } from "./user.interface";
 import { validationMiddleware } from "../middleware/validation.middleware";
-import { UpdateUserDto, UpdateUserPositionDto } from "./user.dto";
+import { UpdateUserDto } from "./user.dto";
 
 export class UserController implements IController {
   public path: string = "/users";
@@ -14,6 +14,18 @@ export class UserController implements IController {
   constructor() {
     this.initializeRoutes();
   }
+  
+  public initializeRoutes() {
+    this.router.get(`${this.path}/:id`, this.getUserById);
+    this.router.get(this.path, this.getAllUsers);
+    this.router.patch(
+      `${this.path}/:id`,
+      validationMiddleware(UpdateUserDto),
+      this.updateUser
+    );
+    this.router.delete(`${this.path}/:id`, this.deleteUser);
+  }
+
    /**
      * @swagger
      * /users/{id}:
@@ -49,48 +61,84 @@ export class UserController implements IController {
      *                   type: string
      *                   example: bekkgboy2@gmail.com
      *                   description: The email address of the user.
+     *                 isEmailConfirmed:
+     *                   type: boolean
+     *                   example: true
+     *                   description: The confirmation address of the user.
      *       404:
      *         description: User not found.
      */
 
-  public initializeRoutes() {
-    this.router.get(`${this.path}/:id`, this.getUserById);
+  private getUserById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+
+      const user = await this.user.findById(id);
+
+      if (!user) {
+        return next(new UserNotFoundException(id));
+      }
+
+      res.send(user);
+    } catch (err) {
+      next(err);
+    }
+  };
 
       /**
-     * @swagger
-     * /users:
-     *   get:
-     *     summary: Get all users
-     *     tags:
-     *       - Users
-     *     description: Retrieve a list of all users.
-     *     responses:
-     *       200:
-     *         description: A list of users.
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: array
-     *               items:
-     *                 type: object
-     *                 properties:
-     *                   id:
-     *                     type: string
-     *                     description: The unique identifier of the user.
-     *                   username:
-     *                     type: string
-     *                     example: Bektursun
-     *                     description: The name of the user.
-     *                   email:
-     *                     type: string
-     *                     example: bekkgboy2@gmail.com
-     *                     description: The email address of the user.
-     */
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     tags:
+ *       - Users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     description: The unique identifier of the user.
+ *                   username:
+ *                     type: string
+ *                     example: Bektursun
+ *                     description: The name of the user.
+ *                   email:
+ *                     type: string
+ *                     example: bekkgboy2@gmail.com
+ *                     description: The email address of the user.
+ *                   isEmailConfirmed:
+ *                     type: boolean
+ *                     example: true
+ *                     description: Indicates whether the user's email is confirmed.
+ */
 
 
-    this.router.get(this.path, this.getAllUsers);
+  private getAllUsers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const users = await this.user.find();
+      res.send(users);
+    } catch (err) {
+      next(err);
+    }
+  };
 
-    /**
+  /**
  * @swagger
  * /users/{id}/select/admin:
  *   put:
@@ -117,10 +165,6 @@ export class UserController implements IController {
  *                 type: string
  *                 example: admin
  *                 description: The role to assign to the user.
- *              position:
- *                 type: string
- *                 example: Manager of Fabric
- *                 description: The position to assign to the user.
  *     responses:
  *       200:
  *         description: User promoted to admin successfully.
@@ -150,73 +194,6 @@ export class UserController implements IController {
  *         description: User not found.
  */
 
-    this.router.patch(
-      `${this.path}/:id/select/admin`,
-      validationMiddleware(UpdateUserPositionDto),
-      this.createAdmin
-    );
-    this.router.put(
-      `${this.path}/:id`,
-      validationMiddleware(UpdateUserDto),
-      this.updateUser
-    );
-    this.router.delete(`${this.path}/:id`, this.deleteUser);
-  }
-
-  private getUserById = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { id } = req.params;
-
-      const user = await this.user.findById(id);
-
-      if (!user) {
-        return next(new UserNotFoundException(id));
-      }
-
-      res.send(user);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  private getAllUsers = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const users = await this.user.find();
-      res.send(users);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  private createAdmin = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { id } = req.params;
-      const userData: IAdminPosition = req.body;
-
-      const updatedUser = await this.user.findByIdAndUpdate(id, userData, {
-        new: true,
-      });
-
-      if (!updatedUser) {
-        return next(new UserNotFoundException(id));
-      }
-      res.send(updatedUser);
-    } catch (err) {
-      next(err);
-    }
-  };
 
   private updateUser = async (
     req: Request,

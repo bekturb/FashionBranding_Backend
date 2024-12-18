@@ -18,14 +18,11 @@ const userSchema = new Schema(
     image: {
       type: String,
     },
+    
     isEmailConfirmed: Boolean,
-    position: {
-      type: String,
-      default: "Employee",
-    },
     role: {
       type: String,
-      default: "Guest",
+      default: "Admin",
     },
   },
   {
