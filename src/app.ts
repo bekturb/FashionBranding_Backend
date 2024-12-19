@@ -1,9 +1,11 @@
-import * as bodyParser from 'body-parser';
-import * as express from 'express';
+import * as bodyParser from "body-parser";
+import * as express from "express";
+import * as swaggerUi from "swagger-ui-express";
+import mongoose from "mongoose";
+import { IController } from "./interfaces/controller.interface";
+import { errorMiddleware } from "./middleware/error.middleware";
+import { swaggerSpec } from "./swagger";
 import * as cookieParser from "cookie-parser";
-import mongoose from 'mongoose';
-import { IController } from './interfaces/controller.interface';
-import { errorMiddleware } from './middleware/error.middleware';
 
 export class App {
   public app: express.Application;
@@ -12,6 +14,7 @@ export class App {
     this.app = express();
 
     this.connectToTheDatabase();
+    this.setupSwagger();
     this.initializeMiddlewares();
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
@@ -21,6 +24,10 @@ export class App {
     this.app.listen(process.env.PORT, () => {
       console.log(`App listening on the port ${process.env.PORT}`);
     });
+  }
+
+  private setupSwagger() {
+    this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   }
 
   private initializeMiddlewares() {
@@ -34,13 +41,13 @@ export class App {
 
   private initializeControllers(controllers) {
     controllers.forEach((controller) => {
-      this.app.use('/', controller.router);
+      this.app.use("/", controller.router);
     });
   }
 
   private connectToTheDatabase() {
     const { MONGO_PATH } = process.env;
-    mongoose.set('strictQuery', false);
+    mongoose.set("strictQuery", false);
     mongoose.connect(MONGO_PATH);
   }
 }
