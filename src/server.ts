@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { App } from './app';
 import { UserController } from './user/user.controller';
 import { AuthenticationController } from './authentication/authentication.controller';
