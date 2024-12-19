@@ -15,7 +15,10 @@ const userSchema = new Schema(
       type: String,
       get: (): undefined => undefined,
     },
-    isEmailConfirmed: Boolean,
+    isEmailConfirmed: {
+      type: Boolean,
+      default: false
+    },
     role: String,
   },
   {
