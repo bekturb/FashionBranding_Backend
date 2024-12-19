@@ -5,6 +5,8 @@ import { applicationRequestModel } from './applicationRequest.model';
 import { ApplicationRequestNotFoundException } from '../exceptions/applicationRequestNotFound.exception';
 import { CreateApplicationRequestDto, UpdateApplicationRequestDto } from './applicationRequest.dto';
 import { validationMiddleware } from '../middleware/validation.middleware';
+import { IRequestsQuery } from '../interfaces/requestsQuery.interface';
+import { QueryBuilder } from '../utils/queryBuilder';
 
 export class ApplicationRequestController implements IController {
   public path: string = '/application-request';
@@ -39,10 +41,26 @@ export class ApplicationRequestController implements IController {
     }
   };
 
-  private getAllApplicationRequests = async (req: Request, res: Response, next: NextFunction) => {
+  private getAllApplicationRequests = async (
+    req: Request<unknown, unknown, unknown, IRequestsQuery>,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
-      const applicationRequests = await this.applicationRequest.find();
-      res.send(applicationRequests);
+      const queryBuilder = new QueryBuilder(req.query);      
+
+      const skip = queryBuilder.getSkip();
+      const limit = queryBuilder.getLimit();
+      const filters = queryBuilder.getFilters();
+
+      const applicationRequests = await this.applicationRequest
+      .find(filters)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+      res.status(200).send(applicationRequests);
+      
     } catch (err) {
       next(err);
     }
