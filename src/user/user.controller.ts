@@ -131,7 +131,7 @@ export class UserController implements IController {
     next: NextFunction
   ) => {
     try {
-      const users = await this.user.find();
+      const users = await this.user.find().select("+password");
       res.send(users);
     } catch (err) {
       next(err);

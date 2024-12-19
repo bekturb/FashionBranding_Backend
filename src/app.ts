@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { IController } from "./interfaces/controller.interface";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { swaggerSpec } from "./swagger";
+import * as cookieParser from "cookie-parser";
 
 export class App {
   public app: express.Application;
@@ -31,6 +32,7 @@ export class App {
 
   private initializeMiddlewares() {
     this.app.use(bodyParser.json());
+    this.app.use(cookieParser());
   }
 
   private initializeErrorHandling() {

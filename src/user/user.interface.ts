@@ -2,6 +2,7 @@ import { UserRole } from './enum/role.enum';
 
 export interface IAdminPosition {
   password: string;
+  isEmailConfirmed: boolean,
   role: UserRole;
 }
 
