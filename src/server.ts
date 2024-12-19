@@ -4,6 +4,7 @@ import { AuthenticationController } from './authentication/authentication.contro
 import { RequestController } from './request/request.controller';
 import { ClothingController } from './clothing/clothing.controller';
 import { BannerController } from './banner/banner.controller';
+import { ApplicationRequestController } from './applicationRequest/applicationRequest.controller';
 
 const app = new App([
   new AuthenticationController(),
@@ -11,6 +12,7 @@ const app = new App([
   new ClothingController(),
   new BannerController(),
   new RequestController(),
+  new ApplicationRequestController()
 ]);
 
 app.listen();
