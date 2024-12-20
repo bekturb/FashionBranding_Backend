@@ -43,7 +43,7 @@ class AuthenticationService {
       expiresAt: oneYearFromNow(),
     });
 
-    const url = `${process.env.APP_URL}auth/email/verify/${verificationCode._id}`;
+    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
 
     await this.emailService.sendVerificationEmail(user.email, url);
     return {
