@@ -322,7 +322,7 @@ export class EmployeeController implements IController {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: User deleted successfully.
+ *                   example: Employee deleted successfully.
  *       404:
  *         description: Employee not found.
  *       500:
