@@ -138,19 +138,19 @@ export class UserController implements IController {
     }
   };
 
-  /**
+/**
  * @swagger
  * /users/{id}:
  *   put:
- *     summary: Promote a user to admin
+ *     summary: Update a user's details
  *     tags:
  *       - Users
- *     description: Update a user's role to admin.
+ *     description: Update a user's profile information such as username and image.
  *     parameters:
  *       - name: id
  *         in: path
  *         required: true
- *         description: The ID of the user to promote.
+ *         description: The ID of the user to update.
  *         schema:
  *           type: string
  *           example: 64b2f0c7e11a4e6d8b16a8e2
@@ -167,11 +167,11 @@ export class UserController implements IController {
  *                 description: The name of the user.
  *               image:
  *                 type: string
- *                 example: https://cdn.example.com/images/photo.jpg.
- *                 description: The image of the user.
+ *                 example: https://cdn.example.com/images/photo.jpg
+ *                 description: The image URL of the user.
  *     responses:
  *       200:
- *         description: User promoted to admin successfully.
+ *         description: User updated successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -183,24 +183,21 @@ export class UserController implements IController {
  *                 username:
  *                   type: string
  *                   example: Bektursun
- *                   description: The name of the user.
+ *                   description: The updated name of the user.
  *                 email:
  *                   type: string
  *                   example: bekkgboy2@gmail.com
  *                   description: The email address of the user.
- *                 role:
- *                   type: string
- *                   example: admin
- *                   description: The updated role of the user.
  *                 image:
  *                   type: string
- *                   example: https://cdn.example.com/images/photo.jpg.
- *                   description: The image of the user.
+ *                   example: https://cdn.example.com/images/photo.jpg
+ *                   description: The updated image URL of the user.
  *       400:
  *         description: Invalid input or missing parameters.
  *       404:
  *         description: User not found.
  */
+
 
 
   private updateUser = async (
