@@ -326,6 +326,30 @@ export class AuthenticationController implements IController {
     }
   };
 
+  /**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Log out the user
+ *     tags:
+ *       - Authentication
+ *     description: Clears authentication cookies and logs the user out.
+ *     responses:
+ *       200:
+ *         description: Logout successful.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Logout successful
+ *                   description: Confirmation message for successful logout.
+ *       500:
+ *         description: An internal server error occurred.
+ */
+
   private loggingOut = (
     request: Request,
     response: Response,
@@ -368,6 +392,58 @@ export class AuthenticationController implements IController {
     }
   };
 
+  /**
+ * @swagger
+ * /auth/password/reset:
+ *   post:
+ *     summary: Reset user password
+ *     tags:
+ *       - Authentication
+ *     description: Reset a user's password by providing their email, old password, new password, and confirmation password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: bekkgboy2@gmail.com
+ *                 description: The email address of the user requesting a password reset.
+ *               oldPassword:
+ *                 type: string
+ *                 example: oldpassword123
+ *                 description: The user's current password.
+ *               password:
+ *                 type: string
+ *                 example: newpassword123
+ *                 description: The new password to set.
+ *               confirmPassword:
+ *                 type: string
+ *                 example: newpassword123
+ *                 description: The confirmation of the new password.
+ *     responses:
+ *       200:
+ *         description: Password reset successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password reset successfully
+ *                   description: Confirmation message for the successful password reset.
+ *       400:
+ *         description: Invalid input or validation errors (e.g., mismatched passwords).
+ *       404:
+ *         description: User not found or incorrect old password.
+ *       500:
+ *         description: An internal server error occurred.
+ */
+
+
   private resetPassword = async (
     request: Request,
     response: Response,
@@ -386,6 +462,45 @@ export class AuthenticationController implements IController {
       next(error);
     }
   };
+
+  /**
+ * @swagger
+ * /auth/forget/password:
+ *   post:
+ *     summary: Send password reset email
+ *     tags:
+ *       - Authentication
+ *     description: Sends a password reset email to the user with a reset URL.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *                 description: The email address of the user.
+ *     responses:
+ *       200:
+ *         description: Password reset email sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: A password reset email has been sent to user@example.com.
+ *       400:
+ *         description: Invalid input or missing parameters.
+ *       404:
+ *         description: User not found with the provided email.
+ *       429:
+ *         description: Too many requests, please try again later.
+ */
+
 
   private sendPasswordReset = async (
     request: Request,
@@ -407,6 +522,46 @@ export class AuthenticationController implements IController {
       next(error);
     }
   };
+
+  /**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset forgotten password
+ *     tags:
+ *       - Authentication
+ *     description: Allows users to reset their forgotten password by providing a valid verification code and a new password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               verificationCode:
+ *                 type: string
+ *                 example: 64b2f0c7e11a4e6d8b16a8e2
+ *                 description: The unique verification code for resetting the password.
+ *               password:
+ *                 type: string
+ *                 example: NewPassword123!
+ *                 description: The new password for the user.
+ *     responses:
+ *       200:
+ *         description: Password reset successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password reset successfully.
+ *       400:
+ *         description: Invalid input or missing parameters.
+ *       404:
+ *         description: Invalid or expired verification code, or user not found.
+ */
 
   private resetForgotenPassword = async (
     request: Request,
