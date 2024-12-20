@@ -1,18 +1,19 @@
 import * as bodyParser from "body-parser";
 import * as express from "express";
 import * as swaggerUi from "swagger-ui-express";
+import * as cookieParser from "cookie-parser";
+import * as cors from "cors";
 import mongoose from "mongoose";
 import { IController } from "./interfaces/controller.interface";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { swaggerSpec } from "./swagger";
-import * as cookieParser from "cookie-parser";
+import { corsOptions } from "./utils/cors.option";
 
 export class App {
   public app: express.Application;
 
   constructor(controllers: IController[]) {
     this.app = express();
-
     this.connectToTheDatabase();
     this.setupSwagger();
     this.initializeMiddlewares();
@@ -31,6 +32,7 @@ export class App {
   }
 
   private initializeMiddlewares() {
+    this.app.use(cors(corsOptions));
     this.app.use(bodyParser.json());
     this.app.use(cookieParser());
   }
