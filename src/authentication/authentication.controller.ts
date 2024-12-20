@@ -209,7 +209,7 @@ export class AuthenticationController implements IController {
    *                       type: boolean
    *                       example: true
    *                       description: The confirmation of the user.
-   *                 accessToken:
+   *                 refreshToken:
    *                   type: string
    *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    *                   description: The JWT access token.
@@ -217,10 +217,6 @@ export class AuthenticationController implements IController {
    *         description: Invalid input or missing parameters.
    *       404:
    *         description: Invalid or expired OTP code.
-   *       400:
-   *         description: Invalid OTP
-   *       400:
-   *         description: User not found
    */
 
   private secondStepVerify = async (
@@ -294,7 +290,7 @@ export class AuthenticationController implements IController {
    *                       type: string
    *                       example: bekkgboy2@gmail.com
    *                       description: The email address of the user.
-   *                 accessToken:
+   *                 refreshToken:
    *                   type: string
    *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    *                   description: The JWT access token.
