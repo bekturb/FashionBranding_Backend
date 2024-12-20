@@ -121,40 +121,70 @@ export class RequestController implements IController {
  *     summary: Get all requests
  *     tags:
  *       - Requests
- *     description: Retrieve a list of all requests.
+ *     description: Retrieve a list of all requests with optional filters and pagination.
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           description: The page number for pagination.
+ *       - name: limit
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           description: The number of items per page.
+ *       - name: search
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           description: Search keyword for filtering requests by name or phone number.
+ *       - name: startDate
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *           description: Start date for filtering requests.
+ *       - name: endDate
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *           description: End date for filtering requests.
  *     responses:
  *       200:
  *         description: A list of requests.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     description: The unique ID of the request.
- *                     example: 64b2f0c7e11a4e6d8b16a8e2
- *                   name:
- *                     type: string
- *                     description: The name associated with the request.
- *                     example: Bektursun
- *                   phoneNumber:
- *                     type: string
- *                     description: The phone number for the request.
- *                     example: +996220643466
- *                   type:
- *                     type: string
- *                     description: The type of request.
- *                     enum:
- *                       - order_excursion
- *                       - additional_question
- *                       - contact_us
- *                     example: order_excursion
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       phoneNumber:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 total:
+ *                   type: integer
+ *                   description: Total number of matching requests.
  */
-
-
 
   private getAllRequests = async (
     req: Request<unknown, unknown, unknown, IRequestsQuery>,
@@ -345,8 +375,6 @@ export class RequestController implements IController {
       const request = await this.request.findByIdAndUpdate(id, {
         seen: true,
       });
-
-      console.log(request, "id");
 
       if (!request) {
         next(new ApplicationRequestNotFoundException(id));

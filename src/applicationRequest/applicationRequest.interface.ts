@@ -3,4 +3,5 @@ export interface IApplicationRequest {
   size: string;
   textileName: string;
   phoneNumber: string;
+  seen: boolean;
 }

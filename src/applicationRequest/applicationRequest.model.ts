@@ -7,6 +7,10 @@ const applicationRequestSchema = new Schema(
     size: String,
     textileName: String,
     phoneNumber: String,
+    seen: {
+      type: String,
+      default: false
+    },
   },
   {
     toJSON: {
