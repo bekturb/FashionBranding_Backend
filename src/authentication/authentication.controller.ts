@@ -108,7 +108,7 @@ export class AuthenticationController implements IController {
     const userData: CreateUserDto = request.body;
     try {
       const { user } = await this.authenticationService.register(userData);
-      response.send(user);
+      response.status(201).send({user, message: "Sent verification link to your email"});
     } catch (error) {
       next(error);
     }
@@ -150,10 +150,8 @@ export class AuthenticationController implements IController {
         verificationId,
         next
       );
-
-      response.status(200).send({
-        message: `Verification OTP code sent to ${user.email}`,
-      });
+      
+      response.redirect(`${process.env.APP_FRONT_UR}/stepVerification=${encodeURIComponent(user.email)}`);
     } catch (error) {
       next(error);
     }
