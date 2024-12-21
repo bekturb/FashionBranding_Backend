@@ -62,12 +62,20 @@ class AuthenticationService {
     });
 
     if (!validCode) {
-      next(new NotFoundException("Invalid or expired verification code"));
+      return {
+        redirect: `${process.env.APP_FRONT_URL}/verification-error?message=${encodeURIComponent(
+          "Invalid or expired verification code"
+        )}`,
+      };
     }
 
     const user = await this.user.findById(validCode.userId);
     if (!user) {
-      next(new UserNotFoundException(String(validCode.userId)));
+      return {
+        redirect: `${process.env.APP_FRONT_URL}/verification-error?message=${encodeURIComponent(
+          `User not found for ID ${validCode.userId}`
+        )}`,
+      };
     }
 
     const otp = await this.verificationService.generateOtpCode(user);
