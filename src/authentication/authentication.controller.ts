@@ -146,12 +146,18 @@ export class AuthenticationController implements IController {
   ) => {
     const { verificationId } = request.params;
     try {
-      const { user } = await this.authenticationService.firstStepVerification(
+      const result = await this.authenticationService.firstStepVerification(
         verificationId,
         next
       );
+
+      if (result.redirect) {
+        return response.redirect(result.redirect);
+      }
+
+      const { user } = result;
       
-      response.redirect(`${process.env.APP_FRONT_UR}/stepVerification=${encodeURIComponent(user.email)}`);
+      response.redirect(`${process.env.APP_FRONT_URL}/stepVerification?email=${encodeURIComponent(user.email)}`);
     } catch (error) {
       next(error);
     }
