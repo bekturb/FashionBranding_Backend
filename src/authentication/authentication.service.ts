@@ -53,7 +53,6 @@ class AuthenticationService {
 
   public async firstStepVerification(
     verificationId: string,
-    next: NextFunction
   ) {
     const validCode = await this.verificationCode.findOne({
       _id: verificationId,
@@ -130,6 +129,36 @@ class AuthenticationService {
       refreshToken,
       accessToken,
     };
+  }
+
+  public async handleResendCode(
+    email: string,
+    next: NextFunction
+  ){
+    const user = await this.user.findOne({ email });
+
+    if (!user) {
+      next(new NotFoundException("User not found with this email"));
+    }
+
+    await this.verificationCode.findOneAndDelete({
+      userId: user._id,
+      type: VerificationCode.EmailVerification,
+    });
+
+    const verificationCode = await this.verificationCode.create({
+      userId: user._id,
+      type: VerificationCode.EmailVerification,
+      expiresAt: oneYearFromNow()
+    });
+
+    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
+
+    await this.emailService.sendVerificationEmail(user.email, url);
+
+    return {
+      user
+    }
   }
 
   public async login(
