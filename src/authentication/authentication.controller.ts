@@ -37,6 +37,10 @@ export class AuthenticationController implements IController {
       validationMiddleware(LogInDto),
       this.loggingIn
     );
+    this.router.post(
+      `${this.path}/resend/verification-code/:email`,
+      this.resendVerificationCode
+    );
     this.router.get(`${this.path}/refresh`, this.refreshToken);
     this.router.post(`${this.path}/logout`, this.loggingOut);
     this.router.post(
@@ -148,7 +152,6 @@ export class AuthenticationController implements IController {
     try {
       const result = await this.authenticationService.firstStepVerification(
         verificationId,
-        next
       );
 
       if (result.redirect) {
@@ -158,6 +161,20 @@ export class AuthenticationController implements IController {
       const { user } = result;
       
       response.redirect(`${process.env.APP_FRONT_URL}/stepVerification?email=${encodeURIComponent(user.email)}`);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private resendVerificationCode = async (
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ) => {
+    const { email } = request.params;
+    try {
+      const { user } = await this.authenticationService.handleResendCode(email, next)
+      response.status(201).send({user, message: "Sent verification link to your email"});
     } catch (error) {
       next(error);
     }
