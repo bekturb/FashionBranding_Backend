@@ -23,6 +23,7 @@ export class RequestController implements IController {
       this.createRequest
     );
     this.router.get(this.path, this.getAllRequests);
+    this.router.get(`${this.path}/get-requests/chart`, this.getChartRquests);
     this.router.get(`${this.path}/:id`, this.getRequestById);
     this.router.delete(`${this.path}/:id`, this.deleteRequest);
     this.router.patch(`${this.path}/:id/seen`, this.updateSeenStatus);
@@ -205,6 +206,36 @@ export class RequestController implements IController {
         .limit(limit);
 
       res.status(200).send(requests);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private getChartRquests = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+
+      const requests = await this.request.find()
+
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      const groupedRequests = requests.reduce((acc, entry) => {
+        const month = new Date(entry.createdAt).getMonth();        
+      
+        acc[month] = (acc[month] || 0) + 1;
+      
+        return acc;
+      }, {} as Record<number, number>);
+
+      const data = months.map((month, index) => ({
+        name: month,
+        amt: groupedRequests[index] || 0,
+      }))
+
+      res.status(200).send(data);
     } catch (error) {
       next(error);
     }

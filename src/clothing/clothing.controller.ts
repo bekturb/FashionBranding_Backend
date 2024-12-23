@@ -27,6 +27,50 @@ export class ClothingController implements IController {
     this.router.delete(`${this.path}/:id`, this.deleteClothing);
   }
 
+  /**
+ * @swagger
+ * /clothing/{id}:
+ *   get:
+ *     summary: Get collection by ID
+ *     tags:
+ *       - Collections
+ *     description: Retrieve a collection's details by its unique ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The unique identifier of the collection.
+ *         schema:
+ *           type: string
+ *           example: 64b2f0c7e11a4e6d8b16a8e2
+ *     responses:
+ *       200:
+ *         description: A collection's details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   description: The unique ID of the collection.
+ *                   example: 64b2f0c7e11a4e6d8b16a8e2
+ *                 name:
+ *                   type: string
+ *                   description: The name associated with the collection.
+ *                   example: Bektursun
+ *                 image:
+ *                   type: string
+ *                   description: The image for the collection.
+ *                   example: https://cdn.example.com/images/photo.jpg
+ *                 material:
+ *                   type: string
+ *                   example: Lazer
+ *                   description: The material of collection.
+ *       404:
+ *         description: Collection not found. The collection with the given ID does not exist.
+ */
+
   private getClothingById = async (
     req: Request,
     res: Response,
@@ -46,6 +90,58 @@ export class ClothingController implements IController {
     }
   };
 
+  /**
+ * @swagger
+ * /clothing:
+ *   get:
+ *     summary: Get all collections
+ *     tags:
+ *       - Collections
+ *     description: Retrieve a list of all collections with optional filters and pagination.
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           description: The page number for pagination.
+ *       - name: limit
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           description: The number of items per page.
+ *     responses:
+ *       200:
+ *         description: A list of collections.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       phoneNumber:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 total:
+ *                   type: integer
+ *                   description: Total number of matching collections.
+ */
+
   private getAllClothing = async (
     req: Request,
     res: Response,
@@ -61,19 +157,16 @@ export class ClothingController implements IController {
         this.clothing.countDocuments(),
       ]);
 
-      if (!clothings || clothings.length === 0) {
-        next(ClothingNotFoundException);
-      } else {
-        res.status(200).json({
-          data: clothings,
-          meta: {
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-          },
-        });
-      }
+      res.status(200).json({
+        data: clothings,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+      
     } catch (err) {
       next(err);
     }
