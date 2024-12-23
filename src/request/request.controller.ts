@@ -233,6 +233,7 @@ export class RequestController implements IController {
       const data = months.map((month, index) => ({
         name: month,
         amt: groupedRequests[index] || 0,
+        uv: groupedRequests[index] + 50 || 50,
       }))
 
       res.status(200).send(data);
