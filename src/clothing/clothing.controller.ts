@@ -19,6 +19,7 @@ export class ClothingController implements IController {
   public initializeRoutes() {
     this.router.get(`${this.path}/:id`, this.getClothingById);
     this.router.get(this.path, this.getAllClothing);
+    this.router.get(`${this.path}/get-clothing/by-chart`, this.getChartCollections);
     this.router.post(
       this.path,
       validationMiddleware(CreateClothingDto),
@@ -188,6 +189,38 @@ export class ClothingController implements IController {
       next(err);
     }
   };
+
+  private getChartCollections = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const collections = await this.clothing.find()
+
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      const groupedCollections = collections.reduce((acc, entry) => {
+        const month = new Date(entry.createdAt).getMonth();        
+      
+        acc[month] = (acc[month] || 0) + 1;
+      
+        return acc;
+      }, {} as Record<number, number>);
+
+      const data = months.map((month, index) => ({
+        name: month,
+        amt: groupedCollections[index] || 0,
+        uv: groupedCollections[index] + 50 || 50,
+      }))
+
+      res.status(200).send(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  
 
   /**
    * @swagger
