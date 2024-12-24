@@ -5,4 +5,5 @@ export interface IClothing {
   material: String;
   description: String;
   creatorId: Object;
+  createdAt: Date
 }
