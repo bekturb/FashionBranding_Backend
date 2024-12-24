@@ -4,4 +4,5 @@ export interface IApplicationRequest {
   textileName: string;
   phoneNumber: string;
   seen: boolean;
+  image: string;
 }

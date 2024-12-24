@@ -7,6 +7,7 @@ const applicationRequestSchema = new Schema(
     size: String,
     textileName: String,
     phoneNumber: String,
+    image: String,
     seen: {
       type: String,
       default: false
