@@ -6,11 +6,15 @@ import { IController } from "../interfaces/controller.interface";
 import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
 import { ApplicationRequestNotFoundException } from "../exceptions/applicationRequestNotFound.exception";
 import { QueryBuilder } from "../utils/queryBuilder";
+import { notificationModel } from "../notification/notification.model";
+import mongoose from "mongoose";
 
 export class RequestController implements IController {
   public path: string = "/request";
   public router: Router = Router();
   private request = requestModel;
+  private notification = notificationModel;
+  private mongoose = mongoose;
 
   constructor() {
     this.initializeRoutes();
@@ -103,14 +107,28 @@ export class RequestController implements IController {
     res: Response,
     next: NextFunction
   ) => {
+    const session = await this.mongoose.startSession();
+    session.startTransaction();
+
     try {
       const requestData: CreateRequestDto = req.body;
 
       const request = new this.request(requestData);
-      await request.save();
+      const notification = new this.notification({
+        owner: requestData.name,
+        type: requestData.type
+      })
+
+      await request.save({ session });
+      await notification.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
 
       res.status(201).send(request);
     } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
       next(err);
     }
   };
