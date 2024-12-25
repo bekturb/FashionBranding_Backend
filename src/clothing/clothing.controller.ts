@@ -87,7 +87,7 @@ export class ClothingController implements IController {
       const doc = await this.clothing.findById(id);
 
       if (!doc) {
-        next(new ClothingNotFoundException(id));
+        return next(new ClothingNotFoundException(id));
       } else {
         res.status(200).send(doc);
       }
@@ -336,7 +336,7 @@ export class ClothingController implements IController {
       const updatedClothing = await this.clothing.findByIdAndUpdate(id);
 
       if (!updatedClothing) {
-        next(new ClothingNotFoundException(id));
+        return next(new ClothingNotFoundException(id));
       } else {
         res.status(200).send(updatedClothing);
       }
@@ -387,7 +387,7 @@ export class ClothingController implements IController {
       const { id } = req.params;
       const deletedClothing = await this.clothing.findByIdAndDelete(id);
       if (!deletedClothing) {
-        next(new ClothingNotFoundException(id));
+        return next(new ClothingNotFoundException(id));
       } else {
         res.status(200).send();
       }

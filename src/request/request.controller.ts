@@ -319,7 +319,7 @@ export class RequestController implements IController {
       const request = await this.request.findById(id);
 
       if (!request) {
-        next(new ApplicationRequestNotFoundException(id));
+        return next(new ApplicationRequestNotFoundException(id));
       }
 
       res.send(request);
@@ -372,7 +372,7 @@ export class RequestController implements IController {
       const request = await this.request.findByIdAndDelete(id);
 
       if (!request) {
-        next(new ApplicationRequestNotFoundException(id));
+        return next(new ApplicationRequestNotFoundException(id));
       }
 
       res.status(204).send(request);
@@ -427,7 +427,7 @@ export class RequestController implements IController {
       });
 
       if (!request) {
-        next(new ApplicationRequestNotFoundException(id));
+        return next(new ApplicationRequestNotFoundException(id));
       }
 
       res.status(200).send({message: "Updated successfully"});
