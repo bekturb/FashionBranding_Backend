@@ -24,7 +24,7 @@ export class NotificationController implements IController {
  *   get:
  *     summary: Get all notifications
  *     tags:
- *       Notifications
+ *      - Notifications
  *     description: Retrieve a list of all notifications.
  *     responses:
  *       200:
@@ -67,7 +67,7 @@ export class NotificationController implements IController {
  *   delete:
  *     summary: Delete a notification
  *     tags:
- *       Notifications
+ *       - Notifications
  *     description: Deletes a notification identified by its unique ID.
  *     parameters:
  *       - name: id
