@@ -50,9 +50,7 @@ class AuthenticationService {
     };
   }
 
-  public async firstStepVerification(
-    verificationId: string,
-  ) {
+  public async firstStepVerification(verificationId: string) {
     const validCode = await this.verificationCode.findOne({
       _id: verificationId,
       type: VerificationCode.EmailVerification,
@@ -61,7 +59,9 @@ class AuthenticationService {
 
     if (!validCode) {
       return {
-        redirect: `${process.env.APP_FRONT_URL}/verification-error?message=${encodeURIComponent(
+        redirect: `${
+          process.env.APP_FRONT_URL
+        }/verification-error?message=${encodeURIComponent(
           "Invalid or expired verification code"
         )}`,
       };
@@ -70,7 +70,9 @@ class AuthenticationService {
     const user = await this.user.findById(validCode.userId);
     if (!user) {
       return {
-        redirect: `${process.env.APP_FRONT_URL}/verification-error?message=${encodeURIComponent(
+        redirect: `${
+          process.env.APP_FRONT_URL
+        }/verification-error?message=${encodeURIComponent(
           `User not found for ID ${validCode.userId}`
         )}`,
       };
@@ -86,10 +88,7 @@ class AuthenticationService {
     };
   }
 
-  public async secondStepVerification(
-    email: string,
-    otpCode: string,
-  ) {
+  public async secondStepVerification(email: string, otpCode: string) {
     const storedOtp = await this.otp.findOne({ email });
     if (!storedOtp || new Date() > storedOtp.expiresAt) {
       throw new NotFoundException("Invalid or expired OTP code");
@@ -105,7 +104,7 @@ class AuthenticationService {
       { isEmailConfirmed: true },
       { new: true }
     );
-   
+
     if (!user) {
       throw new NotFoundException("User not found");
     }
@@ -129,9 +128,7 @@ class AuthenticationService {
     };
   }
 
-  public async handleResendCode(
-    email: string,
-  ){
+  public async handleResendCode(email: string) {
     const user = await this.user.findOne({ email });
 
     if (!user) {
@@ -146,7 +143,7 @@ class AuthenticationService {
     const verificationCode = await this.verificationCode.create({
       userId: user._id,
       type: VerificationCode.EmailVerification,
-      expiresAt: oneYearFromNow()
+      expiresAt: oneYearFromNow(),
     });
 
     const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
@@ -154,14 +151,11 @@ class AuthenticationService {
     await this.emailService.sendVerificationEmail(user.email, url);
 
     return {
-      user
-    }
+      user,
+    };
   }
 
-  public async login(
-    logInData: LogInDto,
-    response: Response,
-  ) {
+  public async login(logInData: LogInDto, response: Response) {
     const user = await this.user.findOne({ email: logInData.email });
 
     if (!user) {
@@ -188,6 +182,7 @@ class AuthenticationService {
       await this.emailService.sendVerificationEmail(user.email, url);
 
       response.status(403).send({
+        user,
         message: `User is not verified. A new verification email has been sent to ${user.email}.`,
       });
     }
@@ -203,18 +198,36 @@ class AuthenticationService {
       userId: user._id,
     });
 
-    return { accessToken, refreshToken, user }
+    return { accessToken, refreshToken, user };
   }
 
-  public async refreshUserAccesToken (refreshToken: string){
+  public async loginWithGoogle(profile) {
+    let user = await this.user.findOne({ email: profile._json?.email });    
+
+    if (user) {
+      return { user };
+    }
+
+    user = await this.user.create({
+      name: profile._json?.given_name,
+      email: profile._json?.email,
+      isEmailConfirmed: profile._json?.email_verified,
+      image: profile._json?.picture,
+    });
+    return { user };
+  }
+
+  public async refreshUserAccesToken(refreshToken: string) {
     if (!refreshToken) {
       throw new NotFoundException("Refresh token is missing.");
     }
 
-    const { payload, error } =
-      this.tokenManager.verifyToken<DataStoredInToken>(refreshToken, {
+    const { payload, error } = this.tokenManager.verifyToken<DataStoredInToken>(
+      refreshToken,
+      {
         secret: this.tokenManager.refreshTokenSignOptions.secret,
-      });
+      }
+    );
 
     if (error) {
       throw new NotFoundException("Invalid or expired refresh token.");
@@ -242,73 +255,74 @@ class AuthenticationService {
 
     return {
       newAccessToken,
-      newRefreshToken
-    }
+      newRefreshToken,
+    };
   }
 
-  public async resetUserPassword (resetPasswordData: ResetPasswordDto){
-
-    const {email, oldPassword, password, confirmPassword} = resetPasswordData;
+  public async resetUserPassword(resetPasswordData: ResetPasswordDto) {
+    const { email, oldPassword, password, confirmPassword } = resetPasswordData;
 
     const user = await this.user.findOne({ email });
-      if (!user) {
-        throw new NotFoundException("User not found with this email");
-      }
+    if (!user) {
+      throw new NotFoundException("User not found with this email");
+    }
 
-      const isPasswordMatching = await compareValue(
-        oldPassword,
-        user.get("password", null, { getters: false })
-      );
+    const isPasswordMatching = await compareValue(
+      oldPassword,
+      user.get("password", null, { getters: false })
+    );
 
-      if (!isPasswordMatching) {
-        throw new NotFoundException("Incorrect old password");
-      }
+    if (!isPasswordMatching) {
+      throw new NotFoundException("Incorrect old password");
+    }
 
-      if (password !== confirmPassword) {
-        throw new NotFoundException("Passwords do not match");
-      }
+    if (password !== confirmPassword) {
+      throw new NotFoundException("Passwords do not match");
+    }
 
-      user.password = await hashValue(password);
-      await user.save();
+    user.password = await hashValue(password);
+    await user.save();
   }
 
-  public async sendPasswordResetUrl (forgetPasswordData: ForgetPasswordDto){
+  public async sendPasswordResetUrl(forgetPasswordData: ForgetPasswordDto) {
     const { email } = forgetPasswordData;
 
     const user = await this.user.findOne({ email });
-      if (!user) {
-        throw new NotFoundException("User not found with this email");
-      }
+    if (!user) {
+      throw new NotFoundException("User not found with this email");
+    }
 
-      const recentRequest = await this.verificationCode.countDocuments({
-        userId: user._id,
-        type: VerificationCode.PasswordReset,
-        createdAt: { $gt: fiveMinutesAgo() },
-      });
+    const recentRequest = await this.verificationCode.countDocuments({
+      userId: user._id,
+      type: VerificationCode.PasswordReset,
+      createdAt: { $gt: fiveMinutesAgo() },
+    });
 
-      if (recentRequest >= 1) {
-        throw new NotFoundException("Too many requests, please try again later");
-      }
+    if (recentRequest >= 1) {
+      throw new NotFoundException("Too many requests, please try again later");
+    }
 
-      const expiresAt = oneHourFromNow();
-      const verificationCode = await this.verificationCode.create({
-        userId: user._id,
-        type: VerificationCode.PasswordReset,
-        expiresAt,
-      });
+    const expiresAt = oneHourFromNow();
+    const verificationCode = await this.verificationCode.create({
+      userId: user._id,
+      type: VerificationCode.PasswordReset,
+      expiresAt,
+    });
 
-      const url = `${process.env.APP_URL}/password/reset?code=${
-        verificationCode._id
-      }&exp=${expiresAt.getTime()}`;
-      await this.emailService.sendResetPassworUrl(user.email, url);
+    const url = `${process.env.APP_URL}/password/reset?code=${
+      verificationCode._id
+    }&exp=${expiresAt.getTime()}`;
+    await this.emailService.sendResetPassworUrl(user.email, url);
 
-      return {
-        user
-      }
+    return {
+      user,
+    };
   }
 
-  public async resetForgetPassword (resetForgotenPasswordData: ResetForgotenPasswordDto){
-          const { verificationCode, password } = resetForgotenPasswordData;
+  public async resetForgetPassword(
+    resetForgotenPasswordData: ResetForgotenPasswordDto
+  ) {
+    const { verificationCode, password } = resetForgotenPasswordData;
 
     const validCode = await this.verificationCode.findOne({
       _id: verificationCode,

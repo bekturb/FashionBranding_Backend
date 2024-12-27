@@ -13,8 +13,8 @@ export class QueryBuilder {
   private filterQuery: FilterQuery<IRequest> = {};
 
   constructor(query: IRequestsQuery) {
-    this.page = Number(this.page) || 1
-    this.limit = Number(this.limit) || 6;
+    this.page = parseInt(query.page || "1", 10);
+    this.limit = parseInt(query.limit || "6", 10);
     this.skip = (this.page - 1) * this.limit;
     this.search = query.search?.trim() || "";
     this.startDate = query.startDate ? new Date(query.startDate) : undefined;

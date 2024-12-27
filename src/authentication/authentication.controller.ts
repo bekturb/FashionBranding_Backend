@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction, Router } from "express";
+import GoogleAuth from "../utils/googleAuth";
 import { IController } from "../interfaces/controller.interface";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateUserDto } from "../user/user.dto";
@@ -9,6 +10,7 @@ import { ResetForgotenPasswordDto } from "./resetForgotenPassword.dto";
 import AuthenticationService from "./authentication.service";
 import VerificationsService from "./verifications.service";
 import CookiesManager from "../utils/cookies";
+import { IUser } from "user/user.interface";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -37,6 +39,9 @@ export class AuthenticationController implements IController {
       validationMiddleware(LogInDto),
       this.loggingIn
     );
+    this.router.get(`${this.path}/login-with-google`, GoogleAuth.authenticate(["profile", "email"]));
+    this.router.get(`${this.path}/login-with-google/callback`, GoogleAuth.callbackAuth(), this.googleCallbackHandler);
+    this.router.get(`${this.path}/failed`,  this.loginWithGoogleFailed);
     this.router.post(
       `${this.path}/resend/verification-code/:email`,
       this.resendVerificationCode
@@ -112,7 +117,9 @@ export class AuthenticationController implements IController {
     const userData: CreateUserDto = request.body;
     try {
       const { user } = await this.authenticationService.register(userData);
-      response.status(201).send({user, message: "Sent verification link to your email"});
+      response
+        .status(201)
+        .send({ user, message: "Sent verification link to your email" });
     } catch (error) {
       next(error);
     }
@@ -151,7 +158,7 @@ export class AuthenticationController implements IController {
     const { verificationId } = request.params;
     try {
       const result = await this.authenticationService.firstStepVerification(
-        verificationId,
+        verificationId
       );
 
       if (result.redirect) {
@@ -159,8 +166,12 @@ export class AuthenticationController implements IController {
       }
 
       const { user } = result;
-      
-      response.redirect(`${process.env.APP_FRONT_URL}/stepVerification?email=${encodeURIComponent(user.email)}`);
+
+      response.redirect(
+        `${
+          process.env.APP_FRONT_URL
+        }/stepVerification?email=${encodeURIComponent(user.email)}`
+      );
     } catch (error) {
       next(error);
     }
@@ -173,8 +184,10 @@ export class AuthenticationController implements IController {
   ) => {
     const { email } = request.params;
     try {
-      const { user } = await this.authenticationService.handleResendCode(email)
-      response.status(201).send({user, message: "Sent verification link to your email"});
+      const { user } = await this.authenticationService.handleResendCode(email);
+      response
+        .status(201)
+        .send({ user, message: "Sent verification link to your email" });
     } catch (error) {
       next(error);
     }
@@ -248,10 +261,7 @@ export class AuthenticationController implements IController {
     const { email, otpCode }: { email: string; otpCode: string } = request.body;
     try {
       const { user, accessToken, refreshToken } =
-        await this.authenticationService.secondStepVerification(
-          email,
-          otpCode,
-        );
+        await this.authenticationService.secondStepVerification(email, otpCode);
 
       this.cookiesManager.setAuthCookies({
         response,
@@ -346,29 +356,61 @@ export class AuthenticationController implements IController {
     }
   };
 
+  private googleCallbackHandler = async (req, res: Response, next: NextFunction) => {
+    try {
+      res.send(req?.user)
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  private loginWithGoogleFailed = async (
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ) => {
+    try {
+      response.send("Failed login with google");
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private loginWithGoogleSuccess = async (
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ) => {
+    try {
+      response.send("Success login with google");
+    } catch (error) {
+      next(error);
+    }
+  };
+
   /**
- * @swagger
- * /auth/logout:
- *   post:
- *     summary: Log out the user
- *     tags:
- *       - Authentication
- *     description: Clears authentication cookies and logs the user out.
- *     responses:
- *       200:
- *         description: Logout successful.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Logout successful
- *                   description: Confirmation message for successful logout.
- *       500:
- *         description: An internal server error occurred.
- */
+   * @swagger
+   * /auth/logout:
+   *   post:
+   *     summary: Log out the user
+   *     tags:
+   *       - Authentication
+   *     description: Clears authentication cookies and logs the user out.
+   *     responses:
+   *       200:
+   *         description: Logout successful.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Logout successful
+   *                   description: Confirmation message for successful logout.
+   *       500:
+   *         description: An internal server error occurred.
+   */
 
   private loggingOut = (
     request: Request,
@@ -392,9 +434,7 @@ export class AuthenticationController implements IController {
       const refreshToken = request.cookies.refreshToken as string | undefined;
 
       const { newAccessToken, newRefreshToken } =
-        await this.authenticationService.refreshUserAccesToken(
-          refreshToken,
-        );
+        await this.authenticationService.refreshUserAccesToken(refreshToken);
 
       this.cookiesManager.setAuthCookies({
         response,
@@ -404,7 +444,6 @@ export class AuthenticationController implements IController {
       response.status(200).send({
         message: "Tokens refreshed successfully.",
         accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
       });
     } catch (error) {
       next(Error);
@@ -412,56 +451,55 @@ export class AuthenticationController implements IController {
   };
 
   /**
- * @swagger
- * /auth/password/reset:
- *   post:
- *     summary: Reset user password
- *     tags:
- *       - Authentication
- *     description: Reset a user's password by providing their email, old password, new password, and confirmation password.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 example: bekkgboy2@gmail.com
- *                 description: The email address of the user requesting a password reset.
- *               oldPassword:
- *                 type: string
- *                 example: oldpassword123
- *                 description: The user's current password.
- *               password:
- *                 type: string
- *                 example: newpassword123
- *                 description: The new password to set.
- *               confirmPassword:
- *                 type: string
- *                 example: newpassword123
- *                 description: The confirmation of the new password.
- *     responses:
- *       200:
- *         description: Password reset successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Password reset successfully
- *                   description: Confirmation message for the successful password reset.
- *       400:
- *         description: Invalid input or validation errors (e.g., mismatched passwords).
- *       404:
- *         description: User not found or incorrect old password.
- *       500:
- *         description: An internal server error occurred.
- */
-
+   * @swagger
+   * /auth/password/reset:
+   *   post:
+   *     summary: Reset user password
+   *     tags:
+   *       - Authentication
+   *     description: Reset a user's password by providing their email, old password, new password, and confirmation password.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               email:
+   *                 type: string
+   *                 example: bekkgboy2@gmail.com
+   *                 description: The email address of the user requesting a password reset.
+   *               oldPassword:
+   *                 type: string
+   *                 example: oldpassword123
+   *                 description: The user's current password.
+   *               password:
+   *                 type: string
+   *                 example: newpassword123
+   *                 description: The new password to set.
+   *               confirmPassword:
+   *                 type: string
+   *                 example: newpassword123
+   *                 description: The confirmation of the new password.
+   *     responses:
+   *       200:
+   *         description: Password reset successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Password reset successfully
+   *                   description: Confirmation message for the successful password reset.
+   *       400:
+   *         description: Invalid input or validation errors (e.g., mismatched passwords).
+   *       404:
+   *         description: User not found or incorrect old password.
+   *       500:
+   *         description: An internal server error occurred.
+   */
 
   private resetPassword = async (
     request: Request,
@@ -471,9 +509,7 @@ export class AuthenticationController implements IController {
     try {
       const resetPasswordData: ResetPasswordDto = request.body;
 
-      await this.authenticationService.resetUserPassword(
-        resetPasswordData,
-      );
+      await this.authenticationService.resetUserPassword(resetPasswordData);
 
       response.status(200).send({ message: "Password reset successfully" });
     } catch (error) {
@@ -482,43 +518,42 @@ export class AuthenticationController implements IController {
   };
 
   /**
- * @swagger
- * /auth/forget/password:
- *   post:
- *     summary: Send password reset email
- *     tags:
- *       - Authentication
- *     description: Sends a password reset email to the user with a reset URL.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 example: user@example.com
- *                 description: The email address of the user.
- *     responses:
- *       200:
- *         description: Password reset email sent successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: A password reset email has been sent to user@example.com.
- *       400:
- *         description: Invalid input or missing parameters.
- *       404:
- *         description: User not found with the provided email.
- *       429:
- *         description: Too many requests, please try again later.
- */
-
+   * @swagger
+   * /auth/forget/password:
+   *   post:
+   *     summary: Send password reset email
+   *     tags:
+   *       - Authentication
+   *     description: Sends a password reset email to the user with a reset URL.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               email:
+   *                 type: string
+   *                 example: user@example.com
+   *                 description: The email address of the user.
+   *     responses:
+   *       200:
+   *         description: Password reset email sent successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: A password reset email has been sent to user@example.com.
+   *       400:
+   *         description: Invalid input or missing parameters.
+   *       404:
+   *         description: User not found with the provided email.
+   *       429:
+   *         description: Too many requests, please try again later.
+   */
 
   private sendPasswordReset = async (
     request: Request,
@@ -529,7 +564,7 @@ export class AuthenticationController implements IController {
       const forgetPasswordData: ForgetPasswordDto = request.body;
 
       const { user } = await this.authenticationService.sendPasswordResetUrl(
-        forgetPasswordData,
+        forgetPasswordData
       );
 
       response.status(200).send({
@@ -541,44 +576,44 @@ export class AuthenticationController implements IController {
   };
 
   /**
- * @swagger
- * /auth/reset-password:
- *   post:
- *     summary: Reset forgotten password
- *     tags:
- *       - Authentication
- *     description: Allows users to reset their forgotten password by providing a valid verification code and a new password.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               verificationCode:
- *                 type: string
- *                 example: 64b2f0c7e11a4e6d8b16a8e2
- *                 description: The unique verification code for resetting the password.
- *               password:
- *                 type: string
- *                 example: NewPassword123!
- *                 description: The new password for the user.
- *     responses:
- *       200:
- *         description: Password reset successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Password reset successfully.
- *       400:
- *         description: Invalid input or missing parameters.
- *       404:
- *         description: Invalid or expired verification code, or user not found.
- */
+   * @swagger
+   * /auth/reset-password:
+   *   post:
+   *     summary: Reset forgotten password
+   *     tags:
+   *       - Authentication
+   *     description: Allows users to reset their forgotten password by providing a valid verification code and a new password.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               verificationCode:
+   *                 type: string
+   *                 example: 64b2f0c7e11a4e6d8b16a8e2
+   *                 description: The unique verification code for resetting the password.
+   *               password:
+   *                 type: string
+   *                 example: NewPassword123!
+   *                 description: The new password for the user.
+   *     responses:
+   *       200:
+   *         description: Password reset successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Password reset successfully.
+   *       400:
+   *         description: Invalid input or missing parameters.
+   *       404:
+   *         description: Invalid or expired verification code, or user not found.
+   */
 
   private resetForgotenPassword = async (
     request: Request,
@@ -589,7 +624,7 @@ export class AuthenticationController implements IController {
       const resetForgotenPasswordData: ResetForgotenPasswordDto = request.body;
 
       await this.authenticationService.resetForgetPassword(
-        resetForgotenPasswordData,
+        resetForgotenPasswordData
       );
       this.cookiesManager.clearAuthCookies(response);
 
