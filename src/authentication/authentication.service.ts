@@ -146,7 +146,7 @@ class AuthenticationService {
       userId: user._id,
     });
 
-    return { user, refreshToken, accessToken }
+    return { refreshToken, accessToken }
   }
 
   public async handleResendCode(email: string) {
