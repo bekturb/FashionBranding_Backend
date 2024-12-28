@@ -16,6 +16,7 @@ import VerificationCode from "./enum/verificationCode.enum";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import VerificationsService from "./verifications.service";
 import EmailService from "../utils/email.service";
+import { IUser } from "user/user.interface";
 
 class AuthenticationService {
   public user = userModel;
@@ -26,10 +27,9 @@ class AuthenticationService {
   private otp = otpCodeModel;
   public;
 
-
-  public async getMe(userId: string){
+  public async getMe(userId: string) {
     const user = await this.user.findById(userId);
-    return { user }
+    return { user };
   }
 
   public async register(userData: CreateUserDto) {
@@ -134,6 +134,21 @@ class AuthenticationService {
     };
   }
 
+  public async googleCbHandler(user: IUser) {
+    const refreshToken = this.tokenManager.signToken(
+      {
+        userId: user._id,
+      },
+      this.tokenManager.refreshTokenSignOptions
+    );
+
+    const accessToken = this.tokenManager.signToken({
+      userId: user._id,
+    });
+
+    return { user, refreshToken, accessToken }
+  }
+
   public async handleResendCode(email: string) {
     const user = await this.user.findOne({ email });
 
@@ -208,18 +223,16 @@ class AuthenticationService {
   }
 
   public async loginWithGoogle(profile) {
-    let user = await this.user.findOne({ email: profile._json?.email });    
-
-    if (user) {
-      return { user };
+    let user = await this.user.findOne({ googleId: profile.id });
+    if (!user) {
+      user = await this.user.create({
+        googleId: profile.id,
+        name: profile._json?.given_name,
+        email: profile._json?.email,
+        isEmailConfirmed: profile._json?.email_verified,
+        image: profile._json?.picture,
+      });
     }
-
-    user = await this.user.create({
-      name: profile._json?.given_name,
-      email: profile._json?.email,
-      isEmailConfirmed: profile._json?.email_verified,
-      image: profile._json?.picture,
-    });
     return { user };
   }
 

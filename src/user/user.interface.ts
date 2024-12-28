@@ -7,6 +7,7 @@ export interface IAdminPosition {
 }
 
 export interface IUser extends IAdminPosition {
+  googleId: string;
   _id: string;
   username: string;
   email: string;

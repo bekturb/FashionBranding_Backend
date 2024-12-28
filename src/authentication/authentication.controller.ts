@@ -12,6 +12,7 @@ import VerificationsService from "./verifications.service";
 import CookiesManager from "../utils/cookies";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import { authMiddleware } from "../middleware/auth";
+import { IUser } from "user/user.interface";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -422,9 +423,15 @@ export class AuthenticationController implements IController {
     }
   };
 
-  private googleCallbackHandler = async (req, res: Response, next: NextFunction) => {
+  private googleCallbackHandler = async (request:Request & { user?: IUser }, response: Response, next: NextFunction) => {
     try {
-      res.send(req?.user)
+      const { user, refreshToken, accessToken } = await this.authenticationService.googleCbHandler(request.user)
+      this.cookiesManager.setAuthCookies({
+        response,
+        refreshToken,
+      });
+
+      response.status(200).send({ accessToken, user });
     } catch (error) {
       next(error);
     }
@@ -437,18 +444,6 @@ export class AuthenticationController implements IController {
   ) => {
     try {
       response.send("Failed login with google");
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  private loginWithGoogleSuccess = async (
-    request: Request,
-    response: Response,
-    next: NextFunction
-  ) => {
-    try {
-      response.send("Success login with google");
     } catch (error) {
       next(error);
     }
