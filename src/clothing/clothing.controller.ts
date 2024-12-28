@@ -25,6 +25,7 @@ export class ClothingController implements IController {
     this.router.get(`${this.path}/:id`, this.getClothingById);
     this.router.get(this.path, this.getAllClothing);
     this.router.get(`${this.path}/get-clothing/by-chart`, this.getChartCollections);
+    this.router.get(`${this.path}/get-today/clothing`, this.getTodaysClothing);
     this.router.post(
       this.path,
       validationMiddleware(CreateClothingDto),
@@ -287,7 +288,94 @@ export class ClothingController implements IController {
         }
   };
 
+      /**
+   * @swagger
+   * /clothing/get-today/clothing:
+   *   get:
+   *     summary: Get today's collection
+   *     tags:
+   *       - Collections
+   *     description: Retrieve today's collections.
+   *     responses:
+   *       200:
+   *         description: A collection's details today.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 today: 
+   *                    type: number
+   *                    example: 7
+   *                 yesterday: 
+   *                    type: number
+   *                    example: 0
+   *                 percentageChange: 
+   *                    type: string
+   *                    example: 100.00
+   */
+
+  private getTodaysClothing = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
   
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+  
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            createdAt: {
+              $gte: yesterday,
+              $lt: tomorrow,
+            },
+          },
+        },
+        {
+          $project: {
+            day: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$day",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ];
+  
+      const result = await this.clothing.aggregate(pipeline);
+
+      const todayData = result.find((entry) => entry._id === today.toISOString().slice(0, 10))?.count || 0;
+      const yesterdayData = result.find((entry) => entry._id === yesterday.toISOString().slice(0, 10))?.count || 0;
+  
+      let percentageChange = 0;
+      if (yesterdayData > 0) {
+        percentageChange = ((todayData - yesterdayData) / yesterdayData) * 100;
+      } else if (todayData > 0) {
+        percentageChange = 100;
+      }
+  
+      res.status(200).json({
+        today: todayData,
+        yesterday: yesterdayData,
+        percentageChange: percentageChange.toFixed(2),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 
   /**
    * @swagger
