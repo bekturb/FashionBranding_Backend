@@ -1,7 +1,6 @@
 import { UserWithThatEmailAlreadyExistsException } from "../exceptions/userWithThatEmailAlreadyExists.exception";
 import { NotFoundException } from "../exceptions/notfound.exception";
 import { UserNotFoundException } from "../exceptions/userNotFound.exception";
-import { WrongCredentialsException } from "../exceptions/wrongCredentials.exception";
 import { CreateUserDto } from "../user/user.dto";
 import { LogInDto } from "./login.dto";
 import { ResetPasswordDto } from "./resetPassword.dto";
@@ -96,16 +95,15 @@ class AuthenticationService {
   public async secondStepVerification(
     email: string,
     otpCode: string,
-    next: NextFunction
   ) {
     const storedOtp = await this.otp.findOne({ email });
     if (!storedOtp || new Date() > storedOtp.expiresAt) {
-      next(new NotFoundException("Invalid or expired OTP code"));
+      throw new NotFoundException("Invalid or expired OTP code");
     }
 
     const isValidOtp = await compareValue(otpCode, storedOtp.otp);
     if (!isValidOtp) {
-      next(new NotFoundException("Invalid OTP"));
+      throw new NotFoundException("Invalid OTP");
     }
 
     const user = await this.user.findOneAndUpdate(
@@ -115,7 +113,7 @@ class AuthenticationService {
     );
    
     if (!user) {
-      next(new NotFoundException("User not found"));
+      throw new NotFoundException("User not found");
     }
     const refreshToken = this.tokenManager.signToken(
       {
@@ -139,12 +137,11 @@ class AuthenticationService {
 
   public async handleResendCode(
     email: string,
-    next: NextFunction
   ){
     const user = await this.user.findOne({ email });
 
     if (!user) {
-      next(new NotFoundException("User not found with this email"));
+      throw new NotFoundException("User not found with this email");
     }
 
     await this.verificationCode.findOneAndDelete({
@@ -170,12 +167,11 @@ class AuthenticationService {
   public async login(
     logInData: LogInDto,
     response: Response,
-    next: NextFunction
   ) {
     const user = await this.user.findOne({ email: logInData.email });
 
     if (!user) {
-      next(new WrongCredentialsException());
+      throw new NotFoundException("User not found with this email");
     }
 
     const isPasswordMatching = await compareValue(
@@ -184,7 +180,7 @@ class AuthenticationService {
     );
 
     if (!isPasswordMatching) {
-      next(new NotFoundException("Incorrect password. Please try again."));
+      throw new NotFoundException("Incorrect password. Please try again.");
     }
 
     if (!user.isEmailConfirmed) {
@@ -216,9 +212,9 @@ class AuthenticationService {
     return { accessToken, refreshToken, user }
   }
 
-  public async refreshUserAccesToken (refreshToken: string, next: NextFunction){
+  public async refreshUserAccesToken (refreshToken: string){
     if (!refreshToken) {
-      next(new NotFoundException("Refresh token is missing."));
+      throw new NotFoundException("Refresh token is missing.");
     }
 
     const { payload, error } =
@@ -227,17 +223,17 @@ class AuthenticationService {
       });
 
     if (error) {
-      next(new NotFoundException("Invalid or expired refresh token."));
+      throw new NotFoundException("Invalid or expired refresh token.");
     }
 
     if (!payload) {
-      next(new NotFoundException("Invalid token payload."));
+      throw new NotFoundException("Invalid token payload.");
     }
 
     const userId = payload.userId;
     const user = await this.user.findById(userId);
     if (!user) {
-      next(new UserNotFoundException(userId));
+      throw new NotFoundException("Invalid token payload.");
     }
 
     const newAccessToken = this.tokenManager.signToken(
@@ -256,13 +252,13 @@ class AuthenticationService {
     }
   }
 
-  public async resetUserPassword (resetPasswordData: ResetPasswordDto, next: NextFunction, ){
+  public async resetUserPassword (resetPasswordData: ResetPasswordDto){
 
     const {email, oldPassword, password, confirmPassword} = resetPasswordData;
 
     const user = await this.user.findOne({ email });
       if (!user) {
-        next(new NotFoundException("User not found with this email"));
+        throw new NotFoundException("User not found with this email");
       }
 
       const isPasswordMatching = await compareValue(
@@ -271,22 +267,24 @@ class AuthenticationService {
       );
 
       if (!isPasswordMatching) {
-        next(new NotFoundException("Incorrect old password"));
+        throw new NotFoundException("Incorrect old password");
       }
 
       if (password !== confirmPassword) {
-        next(new NotFoundException("Passwords do not match"));
+        throw new NotFoundException("Passwords do not match");
       }
 
       user.password = await hashValue(password);
       await user.save();
   }
 
-  public async sendPasswordResetUrl (forgetPasswordData: ForgetPasswordDto, next){
+  public async sendPasswordResetUrl (forgetPasswordData: ForgetPasswordDto){
     const { email } = forgetPasswordData;
 
     const user = await this.user.findOne({ email });
-      if (!user) next(new NotFoundException("User not found with this email"));
+      if (!user) {
+        throw new NotFoundException("User not found with this email");
+      }
 
       const recentRequest = await this.verificationCode.countDocuments({
         userId: user._id,
@@ -295,9 +293,7 @@ class AuthenticationService {
       });
 
       if (recentRequest >= 1) {
-        next(
-          new NotFoundException("Too many requests, please try again later")
-        );
+        throw new NotFoundException("Too many requests, please try again later");
       }
 
       const expiresAt = oneHourFromNow();
@@ -317,7 +313,7 @@ class AuthenticationService {
       }
   }
 
-  public async resetForgetPassword (resetForgotenPasswordData: ResetForgotenPasswordDto, next: NextFunction){
+  public async resetForgetPassword (resetForgotenPasswordData: ResetForgotenPasswordDto){
           const { verificationCode, password } = resetForgotenPasswordData;
 
     const validCode = await this.verificationCode.findOne({
@@ -327,7 +323,7 @@ class AuthenticationService {
     });
 
     if (!validCode) {
-      next(new NotFoundException("Invalid or expired verification code"));
+      throw new NotFoundException("Invalid or expired verification code");
     }
 
     const hashedPassword = await hashValue(password);
@@ -337,7 +333,7 @@ class AuthenticationService {
     });
 
     if (!updatedUser) {
-      next(new NotFoundException("User not found or password reset failed"));
+      throw new UserNotFoundException(String(validCode.userId));
     }
 
     await validCode.deleteOne();

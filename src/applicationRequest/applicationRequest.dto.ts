@@ -17,6 +17,10 @@ export class CreateApplicationRequestDto {
   @IsPhoneNumber()
   @IsNotEmpty()
   phoneNumber: string;
+
+  @IsString()
+  @IsNotEmpty()
+  image: string;
 }
 
 export class UpdateApplicationRequestDto {
@@ -40,4 +44,8 @@ export class UpdateApplicationRequestDto {
   @IsNotEmpty()
   @IsOptional()
   phoneNumber: string;
+
+  @IsString()
+  @IsNotEmpty()
+  image: string;
 }

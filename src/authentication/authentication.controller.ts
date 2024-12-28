@@ -242,7 +242,7 @@ export class AuthenticationController implements IController {
   ) => {
     const { email } = request.params;
     try {
-      const { user } = await this.authenticationService.handleResendCode(email, next)
+      const { user } = await this.authenticationService.handleResendCode(email)
       response.status(201).send({user, message: "Sent verification link to your email"});
     } catch (error) {
       next(error);
@@ -320,7 +320,6 @@ export class AuthenticationController implements IController {
         await this.authenticationService.secondStepVerification(
           email,
           otpCode,
-          next
         );
 
       this.cookiesManager.setAuthCookies({
@@ -403,7 +402,7 @@ export class AuthenticationController implements IController {
 
     try {
       const { accessToken, refreshToken, user } =
-        await this.authenticationService.login(logInData, response, next);
+        await this.authenticationService.login(logInData, response);
 
       this.cookiesManager.setAuthCookies({
         response,
@@ -464,7 +463,6 @@ export class AuthenticationController implements IController {
       const { newAccessToken, newRefreshToken } =
         await this.authenticationService.refreshUserAccesToken(
           refreshToken,
-          next
         );
 
       this.cookiesManager.setAuthCookies({
@@ -544,7 +542,6 @@ export class AuthenticationController implements IController {
 
       await this.authenticationService.resetUserPassword(
         resetPasswordData,
-        next
       );
 
       response.status(200).send({ message: "Password reset successfully" });
@@ -602,7 +599,6 @@ export class AuthenticationController implements IController {
 
       const { user } = await this.authenticationService.sendPasswordResetUrl(
         forgetPasswordData,
-        next
       );
 
       response.status(200).send({
@@ -663,7 +659,6 @@ export class AuthenticationController implements IController {
 
       await this.authenticationService.resetForgetPassword(
         resetForgotenPasswordData,
-        next
       );
       this.cookiesManager.clearAuthCookies(response);
 

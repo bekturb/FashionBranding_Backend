@@ -7,11 +7,16 @@ import { CreateApplicationRequestDto, UpdateApplicationRequestDto } from './appl
 import { validationMiddleware } from '../middleware/validation.middleware';
 import { IRequestsQuery } from '../interfaces/requestsQuery.interface';
 import { QueryBuilder } from '../utils/queryBuilder';
+import mongoose from 'mongoose';
+import NotificationEnum from '../notification/enum/notification.enum';
+import { notificationModel } from '../notification/notification.model';
 
 export class ApplicationRequestController implements IController {
   public path: string = '/application-request';
   public router: Router = Router();
 	private applicationRequest = applicationRequestModel;
+  private notification = notificationModel;
+  private mongoose = mongoose;
 
 	constructor() {
 		this.initializeRoutes();
@@ -258,13 +263,28 @@ export class ApplicationRequestController implements IController {
  */
 
   private createApplicationRequest = async (req: Request, res: Response, next: NextFunction) => {
+
+    const session = await this.mongoose.startSession();
+    session.startTransaction();
+
     try {
       const applicationRequestData: IApplicationRequest = req.body;
       const newApplicationRequest = new applicationRequestModel(applicationRequestData);
-      await newApplicationRequest.save();
+      const notification = new this.notification({
+        owner: applicationRequestData.name,
+        type: NotificationEnum.productCalculation,
+      })
+      
+      await newApplicationRequest.save({ session });
+      await notification.save({ session });
+      
+      await session.commitTransaction();
+      session.endSession();
 
       res.status(201).send(newApplicationRequest);
     } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
       next(err);
     }
   };
