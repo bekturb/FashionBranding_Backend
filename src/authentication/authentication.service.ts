@@ -27,6 +27,12 @@ class AuthenticationService {
   private otp = otpCodeModel;
   public;
 
+
+  public async getMe(userId: string){
+    const user = await this.user.findById(userId);
+    return { user }
+  }
+
   public async register(userData: CreateUserDto) {
     if (await this.user.findOne({ email: userData.email })) {
       throw new UserWithThatEmailAlreadyExistsException(userData.email);

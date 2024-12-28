@@ -9,6 +9,8 @@ import { ResetForgotenPasswordDto } from "./resetForgotenPassword.dto";
 import AuthenticationService from "./authentication.service";
 import VerificationsService from "./verifications.service";
 import CookiesManager from "../utils/cookies";
+import DataStoredInToken from "../interfaces/dataStoredInToken";
+import { authMiddleware } from "../middleware/auth";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -22,6 +24,11 @@ export class AuthenticationController implements IController {
   }
 
   private initializeRoutes() {
+    this.router.get(
+      `${this.path}/me`,
+      authMiddleware,
+      this.getMyProfile
+    );
     this.router.post(
       `${this.path}/register`,
       validationMiddleware(CreateUserDto),
@@ -113,6 +120,68 @@ export class AuthenticationController implements IController {
     try {
       const { user } = await this.authenticationService.register(userData);
       response.status(201).send({user, message: "Sent verification link to your email"});
+    } catch (error) {
+      next(error);
+    }
+  };
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get user profile
+ *     description: Retrieve the profile of the authenticated user based on the provided token.
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: [] # Updated to use a common security scheme name like "bearerAuth"
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         description: "Bearer token for authentication. Example: `Bearer <your_token>`"
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   example: "12345"
+ *                 username:
+ *                   type: string
+ *                   example: "john_doe"
+ *                 email:
+ *                   type: string
+ *                   example: "john@example.com"
+ *                 isConfirmed:
+ *                   type: boolean
+ *                   example: true
+ *                 image:
+ *                   type: string
+ *                   example: "jdjdjd.jpeg"
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       500:
+ *         description: Internal Server Error
+ */
+
+
+  private getMyProfile = async (
+    request: Request & { user?: DataStoredInToken },
+    response: Response,
+    next: NextFunction
+  ) => {
+    const userId = request.user?.userId
+    
+    try {
+      const { user } = await this.authenticationService.getMe(userId);
+      response.status(200).send(user);
     } catch (error) {
       next(error);
     }
