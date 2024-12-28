@@ -8,6 +8,7 @@ import { BannerController } from './banner/banner.controller';
 import { ApplicationRequestController } from './applicationRequest/applicationRequest.controller';
 import { EmployeeController } from './employees/employee.controller';
 import { NotificationController } from './notification/notification.controller';
+import { NewsletterController } from './newsletter/newsletter.controller';
 
 const app = new App([
   new AuthenticationController(),
@@ -18,6 +19,7 @@ const app = new App([
   new ApplicationRequestController(),
   new EmployeeController(),
   new NotificationController(),
+  new NewsletterController(),
 ]);
 
 app.listen();
