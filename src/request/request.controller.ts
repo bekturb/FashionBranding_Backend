@@ -218,14 +218,22 @@ export class RequestController implements IController {
       const skip = queryBuilder.getSkip();
       const limit = queryBuilder.getLimit();
       const filters = queryBuilder.getFilters();
+      const page = queryBuilder.getPage();
 
-      const requests = await this.request
-        .find(filters)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+      const [requests, total] = await Promise.all([
+        this.request.find(filters).skip(skip).limit(limit),
+        this.request.countDocuments(),
+      ]);
 
-      res.status(200).send(requests);
+      res.status(200).send({
+        data: requests,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (error) {
       next(error);
     }

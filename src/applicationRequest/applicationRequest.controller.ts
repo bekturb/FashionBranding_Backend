@@ -179,15 +179,22 @@ export class ApplicationRequestController implements IController {
       const skip = queryBuilder.getSkip();
       const limit = queryBuilder.getLimit();
       const filters = queryBuilder.getFilters();
+      const page = queryBuilder.getPage();
 
-      const applicationRequests = await this.applicationRequest
-      .find(filters)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      const [applicationRequests, total] = await Promise.all([
+        this.applicationRequest.find(filters).skip(skip).limit(limit),
+        this.applicationRequest.countDocuments(),
+      ]);
 
-      res.status(200).send(applicationRequests);
-      
+      res.status(200).send({
+        data: applicationRequests,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (err) {
       next(err);
     }
