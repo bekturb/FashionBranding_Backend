@@ -492,7 +492,7 @@ export class AuthenticationController implements IController {
     next: NextFunction
   ) => {
     try {
-      const refreshToken = request.cookies.refreshToken as string | undefined;
+      const refreshToken = request?.cookies?.refreshToken as string | undefined;
 
       const { newAccessToken, newRefreshToken } =
         await this.authenticationService.refreshUserAccesToken(refreshToken);
@@ -507,7 +507,7 @@ export class AuthenticationController implements IController {
         accessToken: newAccessToken,
       });
     } catch (error) {
-      next(Error);
+      next(error);
     }
   };
 

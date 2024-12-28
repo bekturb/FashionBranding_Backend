@@ -236,7 +236,8 @@ class AuthenticationService {
     return { user };
   }
 
-  public async refreshUserAccesToken(refreshToken: string) {
+  public async refreshUserAccesToken(refreshToken: string | undefined) {
+    
     if (!refreshToken) {
       throw new NotFoundException("Refresh token is missing.");
     }
