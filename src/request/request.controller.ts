@@ -7,7 +7,7 @@ import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
 import { ApplicationRequestNotFoundException } from "../exceptions/applicationRequestNotFound.exception";
 import { QueryBuilder } from "../utils/queryBuilder";
 import { notificationModel } from "../notification/notification.model";
-import mongoose from "mongoose";
+import mongoose, { PipelineStage } from "mongoose";
 
 export class RequestController implements IController {
   public path: string = "/request";
@@ -229,34 +229,95 @@ export class RequestController implements IController {
     }
   };
 
+      /**
+   * @swagger
+   * /request/get-requests/chart:
+   *   get:
+   *     summary: Get request for chart
+   *     tags:
+   *       - Requests
+   *     description: Retrieve a request's details for chart.
+   *     responses:
+   *       200:
+   *         description: A request's details in each month.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 name: 
+   *                    type: string,
+   *                    example: Oct
+   *                 pv: 
+   *                    type: number,
+   *                    example: 450
+   *                 amt: 
+   *                    type: number,
+   *                    example: 22
+   *                 uv: 
+   *                    type: number,
+   *                    example: 450
+   */
+
   private getChartRquests = async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
-
-      const requests = await this.request.find()
-
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-      const groupedRequests = requests.reduce((acc, entry) => {
-        const month = new Date(entry.createdAt).getMonth();        
-      
-        acc[month] = (acc[month] || 0) + 1;
-      
-        return acc;
-      }, {} as Record<number, number>);
-
-      const data = months.map((month, index) => ({
-        name: month,
-        amt: groupedRequests[index] || 0,
-        uv: groupedRequests[index] + 50 || 50,
-      }))
-
+      const currentDate = new Date();
+      const last9Months = [];
+  
+      for (let i = 8; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(currentDate.getMonth() - i);
+        last9Months.push(date.toISOString().slice(0, 7));
+      }
+  
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            createdAt: {
+              $gte: new Date(new Date().setMonth(currentDate.getMonth() - 9)),
+            },
+          },
+        },
+        {
+          $project: {
+            month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          },
+        },
+        {
+          $group: {
+            _id: "$month",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ];
+  
+      const result = await this.request.aggregate(pipeline);
+  
+      const monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+  
+      const data = last9Months.map((month) => {
+        const monthData = result.find((entry) => entry._id === month);
+        const monthIndex = parseInt(month.slice(5, 7), 10) - 1;
+        return {
+          name: monthNames[monthIndex],
+          pv: monthData ? monthData.count * 10 : 0,
+          amt: monthData ? monthData.count : 0,
+          uv: monthData ? monthData.count : 0,
+        };
+      });
+  
       res.status(200).send(data);
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   };
 
