@@ -1,3 +1,4 @@
+import { Response } from "express";
 import { UserWithThatEmailAlreadyExistsException } from "../exceptions/userWithThatEmailAlreadyExists.exception";
 import { NotFoundException } from "../exceptions/notfound.exception";
 import { UserNotFoundException } from "../exceptions/userNotFound.exception";
@@ -14,8 +15,7 @@ import TokenManager from "../utils/jwt";
 import VerificationCode from "./enum/verificationCode.enum";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import VerificationsService from "./verifications.service";
-import EmailService from "./email.service";
-import { NextFunction, Response } from "express";
+import EmailService from "../utils/email.service";
 
 class AuthenticationService {
   public user = userModel;
@@ -25,6 +25,12 @@ class AuthenticationService {
   private tokenManager = new TokenManager();
   private otp = otpCodeModel;
   public;
+
+
+  public async getMe(userId: string){
+    const user = await this.user.findById(userId);
+    return { user }
+  }
 
   public async register(userData: CreateUserDto) {
     if (await this.user.findOne({ email: userData.email })) {

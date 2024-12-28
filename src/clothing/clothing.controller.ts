@@ -6,11 +6,16 @@ import { CreateClothingDto, UpdateClothingDto } from "./clothing.dto";
 import { IClothing } from "./clothing.interface";
 import { ClothingNotFoundException } from "../exceptions/clothingNotFound.exception";
 import { QueryBuilder } from "../utils/queryBuilder";
+import { newsletterModel } from "../newsletter/newsletter.module";
+import EmailService from "../utils/email.service";
+import { PipelineStage } from "mongoose";
 
 export class ClothingController implements IController {
   public path = "/clothing";
   public router = Router();
+  private emailService = new EmailService();
   private clothing = clothingModel;
+  private newsletter = newsletterModel;
 
   constructor() {
     this.initializeRoutes();
@@ -20,6 +25,7 @@ export class ClothingController implements IController {
     this.router.get(`${this.path}/:id`, this.getClothingById);
     this.router.get(this.path, this.getAllClothing);
     this.router.get(`${this.path}/get-clothing/by-chart`, this.getChartCollections);
+    this.router.get(`${this.path}/get-today/clothing`, this.getTodaysClothing);
     this.router.post(
       this.path,
       validationMiddleware(CreateClothingDto),
@@ -190,37 +196,186 @@ export class ClothingController implements IController {
     }
   };
 
+    /**
+   * @swagger
+   * /clothing/get-clothing/by-chart:
+   *   get:
+   *     summary: Get collection for chart
+   *     tags:
+   *       - Collections
+   *     description: Retrieve a collection's details for chart.
+   *     responses:
+   *       200:
+   *         description: A collection's details in each month.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 name: 
+   *                    type: string,
+   *                    example: Oct
+   *                 pv: 
+   *                    type: number,
+   *                    example: 450
+   *                 amt: 
+   *                    type: number,
+   *                    example: 22
+   *                 uv: 
+   *                    type: number,
+   *                    example: 450
+   */
+
   private getChartCollections = async (
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const collections = await this.clothing.find()
-
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-      const groupedCollections = collections.reduce((acc, entry) => {
-        const month = new Date(entry.createdAt).getMonth();        
+          const currentDate = new Date();
+          const last9Months = [];
       
-        acc[month] = (acc[month] || 0) + 1;
+          for (let i = 8; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(currentDate.getMonth() - i);
+            last9Months.push(date.toISOString().slice(0, 7));
+          }
       
-        return acc;
-      }, {} as Record<number, number>);
+          const pipeline: PipelineStage[] = [
+            {
+              $match: {
+                createdAt: {
+                  $gte: new Date(new Date().setMonth(currentDate.getMonth() - 9)),
+                },
+              },
+            },
+            {
+              $project: {
+                month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+              },
+            },
+            {
+              $group: {
+                _id: "$month",
+                count: { $sum: 1 },
+              },
+            },
+            {
+              $sort: { _id: 1 },
+            },
+          ];
+      
+          const result = await this.clothing.aggregate(pipeline);
+      
+          const monthNames = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+          ];
+      
+          const data = last9Months.map((month) => {
+            const monthData = result.find((entry) => entry._id === month);
+            const monthIndex = parseInt(month.slice(5, 7), 10) - 1;
+            return {
+              name: monthNames[monthIndex],
+              pv: monthData ? monthData.count * 10 : 0,
+              amt: monthData ? monthData.count : 0,
+              uv: monthData ? monthData.count : 0,
+            };
+          });
+      
+          res.status(200).send(data);
+        } catch (err) {
+          next(err);
+        }
+  };
 
-      const data = months.map((month, index) => ({
-        name: month,
-        amt: groupedCollections[index] || 0,
-        uv: groupedCollections[index] + 50 || 50,
-      }))
+      /**
+   * @swagger
+   * /clothing/get-today/clothing:
+   *   get:
+   *     summary: Get today's collection
+   *     tags:
+   *       - Collections
+   *     description: Retrieve today's collections.
+   *     responses:
+   *       200:
+   *         description: A collection's details today.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 today: 
+   *                    type: number
+   *                    example: 7
+   *                 yesterday: 
+   *                    type: number
+   *                    example: 0
+   *                 percentageChange: 
+   *                    type: string
+   *                    example: 100.00
+   */
 
-      res.status(200).send(data);
+  private getTodaysClothing = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+  
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+  
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            createdAt: {
+              $gte: yesterday,
+              $lt: tomorrow,
+            },
+          },
+        },
+        {
+          $project: {
+            day: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$day",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ];
+  
+      const result = await this.clothing.aggregate(pipeline);
+
+      const todayData = result.find((entry) => entry._id === today.toISOString().slice(0, 10))?.count || 0;
+      const yesterdayData = result.find((entry) => entry._id === yesterday.toISOString().slice(0, 10))?.count || 0;
+  
+      let percentageChange = 0;
+      if (yesterdayData > 0) {
+        percentageChange = ((todayData - yesterdayData) / yesterdayData) * 100;
+      } else if (todayData > 0) {
+        percentageChange = 100;
+      }
+  
+      res.status(200).json({
+        today: todayData,
+        yesterday: yesterdayData,
+        percentageChange: percentageChange.toFixed(2),
+      });
     } catch (err) {
       next(err);
     }
-  };
-
-  
+  }
 
   /**
    * @swagger
@@ -319,6 +474,11 @@ export class ClothingController implements IController {
       const clothingData: IClothing = req.body;
       const newClothing = new clothingModel(clothingData);
       await newClothing.save();
+
+      const subscribers = await this.newsletter.find({});
+      const emailList = subscribers.map((subscribe) => subscribe.email);
+
+      await this.emailService.sendNewsletter(emailList, clothingData.name as string);
 
       res.status(201).send(newClothing);
     } catch (err) {

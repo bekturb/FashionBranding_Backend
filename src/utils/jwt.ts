@@ -4,7 +4,7 @@ import {UserRole} from "../user/enum/role.enum";
 import DataStoredInToken from "interfaces/dataStoredInToken";
 
 const defaults: SignOptions = {
-  audience: [UserRole.GUEST],
+  audience: [UserRole.ADMIN],
 };
 
 class TokenManager {
