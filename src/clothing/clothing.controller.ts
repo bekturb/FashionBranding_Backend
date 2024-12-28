@@ -6,11 +6,15 @@ import { CreateClothingDto, UpdateClothingDto } from "./clothing.dto";
 import { IClothing } from "./clothing.interface";
 import { ClothingNotFoundException } from "../exceptions/clothingNotFound.exception";
 import { QueryBuilder } from "../utils/queryBuilder";
+import { newsletterModel } from "../newsletter/newsletter.module";
+import EmailService from "../utils/email.service";
 
 export class ClothingController implements IController {
   public path = "/clothing";
   public router = Router();
+  private emailService = new EmailService();
   private clothing = clothingModel;
+  private newsletter = newsletterModel;
 
   constructor() {
     this.initializeRoutes();
@@ -319,6 +323,11 @@ export class ClothingController implements IController {
       const clothingData: IClothing = req.body;
       const newClothing = new clothingModel(clothingData);
       await newClothing.save();
+
+      const subscribers = await this.newsletter.find({});
+      const emailList = subscribers.map((subscribe) => subscribe.email);
+
+      await this.emailService.sendNewsletter(emailList, clothingData.name as string);
 
       res.status(201).send(newClothing);
     } catch (err) {

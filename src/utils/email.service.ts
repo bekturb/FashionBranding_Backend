@@ -30,12 +30,25 @@ class EmailService {
         subject: "Email Verification",
         html: emailContent,
       });
-
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to send verification email to ${email}. Please try again.`
       );
     }
+  }
+
+  public async sendNewsletter(
+    emailList: string[],
+    name: string
+  ): Promise<void> {
+    const emailContent = this.getNewsletterContent(name);
+
+    await this.transporter.sendMail({
+      from: '"Your App Name" <no-reply@yourapp.com>',
+      to: emailList.join(","),
+      subject: "New Clothing Item Available!",
+      html: emailContent,
+    });
   }
 
   public async sendVerificationOtp(
@@ -95,6 +108,12 @@ class EmailService {
             <p><a href="${verificationLink}" style="color: #007bff;">${verificationLink}</a></p>
             <p>Thank you for joining us!</p>
           </div>
+        `;
+  }
+
+  private getNewsletterContent(name: string): string {
+    return `
+         <p>Check out our new clothing item: <strong>${name}</strong></p>
         `;
   }
 
