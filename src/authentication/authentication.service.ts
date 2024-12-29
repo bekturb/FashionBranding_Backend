@@ -16,7 +16,7 @@ import VerificationCode from "./enum/verificationCode.enum";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import VerificationsService from "./verifications.service";
 import EmailService from "../utils/email.service";
-import { IUser } from "user/user.interface";
+import { IUser } from "../user/user.interface";
 
 class AuthenticationService {
   public user = userModel;

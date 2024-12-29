@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsPhoneNumber, IsString } from 'class-validator';
 
 export class CreateApplicationRequestDto {
   @IsString()
@@ -16,33 +16,6 @@ export class CreateApplicationRequestDto {
   @IsString()
   @IsPhoneNumber()
   @IsNotEmpty()
-  phoneNumber: string;
-
-  @IsString()
-  @IsNotEmpty()
-  image: string;
-}
-
-export class UpdateApplicationRequestDto {
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  name: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  size: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  textileName: string;
-
-  @IsString()
-  @IsPhoneNumber()
-  @IsNotEmpty()
-  @IsOptional()
   phoneNumber: string;
 
   @IsString()

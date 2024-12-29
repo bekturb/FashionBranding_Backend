@@ -12,7 +12,7 @@ import VerificationsService from "./verifications.service";
 import CookiesManager from "../utils/cookies";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import { authMiddleware } from "../middleware/auth";
-import { IUser } from "user/user.interface";
+import { IUser } from "../user/user.interface";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -422,6 +422,43 @@ export class AuthenticationController implements IController {
       next(error);
     }
   };
+
+    /**
+   * @swagger
+   * /auth/login-with-google:
+   *   get:
+   *     summary: User login with google
+   *     tags:
+   *       - Authentication
+   *     description: Authenticate a user by their gogole. Returns user data and a JWT access token.
+   *     responses:
+   *       200:
+   *         description: Login successful. Returns user data and access token.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 user:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       example: 64b2f0c7e11a4e6d8b16a8e2
+   *                       description: The unique ID of the user.
+   *                     username:
+   *                       type: string
+   *                       example: Bektursun
+   *                       description: The name of the user.
+   *                     email:
+   *                       type: string
+   *                       example: bekkgboy2@gmail.com
+   *                       description: The email address of the user.
+   *                 accessToken:
+   *                   type: string
+   *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   *                   description: The JWT access token.
+   */
 
   private googleCallbackHandler = async (request:Request & { user?: IUser }, response: Response, next: NextFunction) => {
     try {
