@@ -33,10 +33,13 @@ class AuthenticationService {
   }
 
   public async register(userData: CreateUserDto) {
-    if (await this.user.findOne({ email: userData.email })) {
-      throw new UserWithThatEmailAlreadyExistsException(userData.email);
+
+    const {email, password, rememberMe} = userData;
+
+    if (await this.user.findOne({ email: email })) {
+      throw new UserWithThatEmailAlreadyExistsException(email);
     }
-    const hashedPassword = await hashValue(userData.password);
+    const hashedPassword = await hashValue(password);
     const user = await this.user.create({
       ...userData,
       password: hashedPassword,
@@ -48,7 +51,7 @@ class AuthenticationService {
       expiresAt: oneYearFromNow(),
     });
 
-    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}?rememberMe=${userData.rememberMe}`;
+    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}?rememberMe=${rememberMe}`;
 
     await this.emailService.sendVerificationEmail(user.email, url);
     return {
@@ -177,14 +180,17 @@ class AuthenticationService {
   }
 
   public async login(logInData: LogInDto, response: Response) {
-    const user = await this.user.findOne({ email: logInData.email });
+
+    const {email, password, rememberMe} = logInData
+
+    const user = await this.user.findOne({ email: email });
 
     if (!user) {
       throw new NotFoundException("User not found with this email");
     }
 
     const isPasswordMatching = await compareValue(
-      logInData.password,
+      password,
       user.get("password", null, { getters: false })
     );
 
@@ -198,7 +204,7 @@ class AuthenticationService {
         type: VerificationCode.EmailVerification,
         expiresAt: oneYearFromNow(),
       });
-      const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
+      const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}?rememberMe=${rememberMe}`;
 
       await this.emailService.sendVerificationEmail(user.email, url);
 
@@ -212,7 +218,7 @@ class AuthenticationService {
       {
         userId: user._id,
       },
-      this.tokenManager.refreshTokenSignOptions
+      rememberMe ? this.tokenManager.rememberRefreshTokenSignOptions : this.tokenManager.refreshTokenSignOptions
     );
 
     const accessToken = this.tokenManager.signToken({

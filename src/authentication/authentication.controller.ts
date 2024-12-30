@@ -415,6 +415,7 @@ export class AuthenticationController implements IController {
         await this.authenticationService.login(logInData, response);
 
       this.cookiesManager.setAuthCookies({
+        rememberMe: logInData.rememberMe,
         response,
         refreshToken,
       });

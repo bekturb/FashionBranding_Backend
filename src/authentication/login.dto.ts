@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, Length } from 'class-validator';
 
 export class LogInDto {
   @IsEmail()
@@ -8,4 +8,7 @@ export class LogInDto {
   @IsString()
   @Length(8, 50)
   password?: string;
+
+  @IsBoolean()
+  public rememberMe: boolean;
 }
