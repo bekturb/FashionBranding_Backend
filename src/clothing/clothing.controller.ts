@@ -5,17 +5,14 @@ import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateClothingDto, UpdateClothingDto } from "./clothing.dto";
 import { IClothing } from "./clothing.interface";
 import { ClothingNotFoundException } from "../exceptions/clothingNotFound.exception";
-import { QueryBuilder } from "../utils/queryBuilder";
-import { newsletterModel } from "../newsletter/newsletter.module";
-import EmailService from "../utils/email.service";
-import { PipelineStage } from "mongoose";
+import ClothingService from "./clothing.service";
+import { IRequestsQuery } from "interfaces/requestsQuery.interface";
 
 export class ClothingController implements IController {
   public path = "/clothing";
   public router = Router();
-  private emailService = new EmailService();
   private clothing = clothingModel;
-  private newsletter = newsletterModel;
+  private clothingService = new ClothingService();
 
   constructor() {
     this.initializeRoutes();
@@ -24,7 +21,10 @@ export class ClothingController implements IController {
   public initializeRoutes() {
     this.router.get(`${this.path}/:id`, this.getClothingById);
     this.router.get(this.path, this.getAllClothing);
-    this.router.get(`${this.path}/get-clothing/by-chart`, this.getChartCollections);
+    this.router.get(
+      `${this.path}/get-clothing/by-chart`,
+      this.getChartCollections
+    );
     this.router.get(`${this.path}/get-today/clothing`, this.getTodaysClothing);
     this.router.post(
       this.path,
@@ -90,13 +90,10 @@ export class ClothingController implements IController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      const doc = await this.clothing.findById(id);
 
-      if (!doc) {
-        return next(new ClothingNotFoundException(id));
-      } else {
-        res.status(200).send(doc);
-      }
+      const { clothing } = await this.clothingService.getCollection(id);
+
+      res.status(200).send(clothing);
     } catch (err) {
       next(err);
     }
@@ -170,17 +167,10 @@ export class ClothingController implements IController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const queryBuilder = new QueryBuilder(req.query);
+      const requestQueries: IRequestsQuery = req.query;
 
-      const skip = queryBuilder.getSkip();
-      const limit = queryBuilder.getLimit();
-      const page = queryBuilder.getPage();
-      const filters = queryBuilder.getFilters();
-
-      const [clothings, total] = await Promise.all([
-        this.clothing.find(filters).skip(skip).limit(limit),
-        this.clothing.countDocuments(),
-      ]);
+      const { clothings, total, page, limit } =
+        await this.clothingService.getCollections(requestQueries);
 
       res.status(200).send({
         data: clothings,
@@ -196,7 +186,7 @@ export class ClothingController implements IController {
     }
   };
 
-    /**
+  /**
    * @swagger
    * /clothing/get-clothing/by-chart:
    *   get:
@@ -212,16 +202,16 @@ export class ClothingController implements IController {
    *             schema:
    *               type: object
    *               properties:
-   *                 name: 
+   *                 name:
    *                    type: string,
    *                    example: Oct
-   *                 pv: 
+   *                 pv:
    *                    type: number,
    *                    example: 450
-   *                 amt: 
+   *                 amt:
    *                    type: number,
    *                    example: 22
-   *                 uv: 
+   *                 uv:
    *                    type: number,
    *                    example: 450
    */
@@ -232,63 +222,14 @@ export class ClothingController implements IController {
     next: NextFunction
   ): Promise<void> => {
     try {
-          const currentDate = new Date();
-          const last9Months = [];
-      
-          for (let i = 8; i >= 0; i--) {
-            const date = new Date();
-            date.setMonth(currentDate.getMonth() - i);
-            last9Months.push(date.toISOString().slice(0, 7));
-          }
-      
-          const pipeline: PipelineStage[] = [
-            {
-              $match: {
-                createdAt: {
-                  $gte: new Date(new Date().setMonth(currentDate.getMonth() - 9)),
-                },
-              },
-            },
-            {
-              $project: {
-                month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-              },
-            },
-            {
-              $group: {
-                _id: "$month",
-                count: { $sum: 1 },
-              },
-            },
-            {
-              $sort: { _id: 1 },
-            },
-          ];
-      
-          const result = await this.clothing.aggregate(pipeline);
-      
-          const monthNames = [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-          ];
-      
-          const data = last9Months.map((month) => {
-            const monthData = result.find((entry) => entry._id === month);
-            const monthIndex = parseInt(month.slice(5, 7), 10) - 1;
-            return {
-              name: monthNames[monthIndex],
-              pv: monthData ? monthData.count * 10 : 0,
-              amt: monthData ? monthData.count : 0,
-              uv: monthData ? monthData.count : 0,
-            };
-          });
-      
-          res.status(200).send(data);
-        } catch (err) {
-          next(err);
-        }
+      const { data } = await this.clothingService.getCollectionsByChart();
+      res.status(200).send(data);
+    } catch (err) {
+      next(err);
+    }
   };
 
-      /**
+  /**
    * @swagger
    * /clothing/get-today/clothing:
    *   get:
@@ -304,13 +245,13 @@ export class ClothingController implements IController {
    *             schema:
    *               type: object
    *               properties:
-   *                 today: 
+   *                 today:
    *                    type: number
    *                    example: 7
-   *                 yesterday: 
+   *                 yesterday:
    *                    type: number
    *                    example: 0
-   *                 percentageChange: 
+   *                 percentageChange:
    *                    type: string
    *                    example: 100.00
    */
@@ -321,53 +262,10 @@ export class ClothingController implements IController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-  
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-  
-      const pipeline: PipelineStage[] = [
-        {
-          $match: {
-            createdAt: {
-              $gte: yesterday,
-              $lt: tomorrow,
-            },
-          },
-        },
-        {
-          $project: {
-            day: {
-              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-            },
-          },
-        },
-        {
-          $group: {
-            _id: "$day",
-            count: { $sum: 1 },
-          },
-        },
-        {
-          $sort: { _id: 1 },
-        },
-      ];
-  
-      const result = await this.clothing.aggregate(pipeline);
+      const { todayData, yesterdayData, percentageChange } =
+        await this.clothingService.getTodaysCollections();
 
-      const todayData = result.find((entry) => entry._id === today.toISOString().slice(0, 10))?.count || 0;
-      const yesterdayData = result.find((entry) => entry._id === yesterday.toISOString().slice(0, 10))?.count || 0;
-  
-      let percentageChange = 0;
-      if (yesterdayData > 0) {
-        percentageChange = ((todayData - yesterdayData) / yesterdayData) * 100;
-      } else if (todayData > 0) {
-        percentageChange = 100;
-      }
-  
-      res.status(200).json({
+      res.status(200).send({
         today: todayData,
         yesterday: yesterdayData,
         percentageChange: percentageChange.toFixed(2),
@@ -375,7 +273,7 @@ export class ClothingController implements IController {
     } catch (err) {
       next(err);
     }
-  }
+  };
 
   /**
    * @swagger
@@ -472,13 +370,10 @@ export class ClothingController implements IController {
   ): Promise<void> => {
     try {
       const clothingData: IClothing = req.body;
-      const newClothing = new clothingModel(clothingData);
-      await newClothing.save();
 
-      const subscribers = await this.newsletter.find({});
-      const emailList = subscribers.map((subscribe) => subscribe.email);
-
-      await this.emailService.sendNewsletter(emailList, clothingData.name as string);
+      const { newClothing } = await this.clothingService.createNewCollection(
+        clothingData
+      );
 
       res.status(201).send(newClothing);
     } catch (err) {
@@ -493,13 +388,10 @@ export class ClothingController implements IController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      const updatedClothing = await this.clothing.findByIdAndUpdate(id);
-
-      if (!updatedClothing) {
-        return next(new ClothingNotFoundException(id));
-      } else {
-        res.status(200).send(updatedClothing);
-      }
+      const { updatedClothing } = await this.clothingService.updateCollection(
+        id
+      );
+      res.status(200).send(updatedClothing);
     } catch (err) {
       next(err);
     }
@@ -545,12 +437,10 @@ export class ClothingController implements IController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      const deletedClothing = await this.clothing.findByIdAndDelete(id);
-      if (!deletedClothing) {
-        return next(new ClothingNotFoundException(id));
-      } else {
-        res.status(200).send();
-      }
+
+      await this.clothingService.deleteCollection(id);
+      
+      res.status(200).send({ message: "Successfully deleted" });
     } catch (err) {
       next(err);
     }

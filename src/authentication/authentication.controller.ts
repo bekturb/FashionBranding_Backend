@@ -238,7 +238,7 @@ export class AuthenticationController implements IController {
       response.redirect(
         `${
           process.env.APP_FRONT_URL
-        }/stepVerification?email=${encodeURIComponent(user.email)}&rememberMe=${rememberMe || false}`
+        }/stepVerification?email=${encodeURIComponent(user.email)}&rememberMe=${rememberMe}`
       );
     } catch (error) {
       next(error);
