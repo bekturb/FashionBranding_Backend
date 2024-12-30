@@ -9,7 +9,6 @@ import { ForgetPasswordDto } from "./forgetPassword.dto";
 import { ResetForgotenPasswordDto } from "./resetForgotenPassword.dto";
 import AuthenticationService from "./authentication.service";
 import VerificationsService from "./verifications.service";
-import CookiesManager from "../utils/cookies";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import { authMiddleware } from "../middleware/auth";
 import { IUser } from "../user/user.interface";
@@ -19,7 +18,6 @@ export class AuthenticationController implements IController {
   public router = Router();
   public authenticationService = new AuthenticationService();
   public verificationService = new VerificationsService();
-  private cookiesManager = new CookiesManager();
 
   constructor() {
     this.initializeRoutes();
@@ -53,8 +51,7 @@ export class AuthenticationController implements IController {
       `${this.path}/resend/verification-code/:email`,
       this.resendVerificationCode
     );
-    this.router.get(`${this.path}/refresh`, this.refreshToken);
-    this.router.post(`${this.path}/logout`, this.loggingOut);
+    this.router.post(`${this.path}/refresh`, this.refreshToken);
     this.router.post(
       `${this.path}/password/reset`,
       validationMiddleware(ResetPasswordDto),
@@ -331,13 +328,7 @@ export class AuthenticationController implements IController {
       const { user, accessToken, refreshToken } =
         await this.authenticationService.secondStepVerification(email, otpCode, rememberMe);
 
-      this.cookiesManager.setAuthCookies({
-        rememberMe,
-        response,
-        refreshToken,
-      });
-
-      response.status(200).send({ accessToken, user });
+      response.status(200).send({ accessToken, user, refreshToken });
     } catch (error) {
       next(error);
     }
@@ -414,13 +405,7 @@ export class AuthenticationController implements IController {
       const { accessToken, refreshToken, user } =
         await this.authenticationService.login(logInData, response);
 
-      this.cookiesManager.setAuthCookies({
-        rememberMe: logInData.rememberMe,
-        response,
-        refreshToken,
-      });
-
-      response.status(200).send({ accessToken, user });
+      response.status(200).send({ accessToken, refreshToken, user });
     } catch (error) {
       next(error);
     }
@@ -465,13 +450,9 @@ export class AuthenticationController implements IController {
 
   private googleCallbackHandler = async (request:Request & { user?: IUser }, response: Response, next: NextFunction) => {
     try {
-      const {refreshToken, accessToken } = await this.authenticationService.googleCbHandler(request.user)
-      this.cookiesManager.setAuthCookies({
-        response,
-        refreshToken,
-      });
+      const {refreshToken, accessToken } = await this.authenticationService.googleCbHandler(request.user);
 
-      response.redirect(`${process.env.APP_FRONT_URL}/success/with-google?accessToken=${accessToken}`);
+      response.redirect(`${process.env.APP_FRONT_URL}/success/with-google?accessToken=${accessToken}&refreshToken=${refreshToken}`);
     } catch (error) {
       next(error);
     }
@@ -513,38 +494,21 @@ export class AuthenticationController implements IController {
    *         description: An internal server error occurred.
    */
 
-  private loggingOut = (
-    request: Request,
-    response: Response,
-    next: NextFunction
-  ) => {
-    try {
-      this.cookiesManager.clearAuthCookies(response);
-      response.status(200).send({ message: "Logout successful" });
-    } catch (error) {
-      next(error);
-    }
-  };
-
   private refreshToken = async (
     request: Request,
     response: Response,
     next: NextFunction
   ) => {
     try {
-      const refreshToken = request?.cookies?.refreshToken as string | undefined;
+      const { refreshToken } = request.body as { refreshToken: string | undefined }      
 
       const { newAccessToken, newRefreshToken } =
         await this.authenticationService.refreshUserAccesToken(refreshToken);
 
-      this.cookiesManager.setAuthCookies({
-        response,
-        refreshToken: newRefreshToken,
-      });
-
       response.status(200).send({
         message: "Tokens refreshed successfully.",
         accessToken: newAccessToken,
+        refreshToken: newRefreshToken
       });
     } catch (error) {
       next(error);
@@ -727,7 +691,6 @@ export class AuthenticationController implements IController {
       await this.authenticationService.resetForgetPassword(
         resetForgotenPasswordData
       );
-      this.cookiesManager.clearAuthCookies(response);
 
       response.status(200).send({ message: "Password reset successfully" });
     } catch (error) {

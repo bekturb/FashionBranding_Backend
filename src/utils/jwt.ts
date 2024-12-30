@@ -9,7 +9,7 @@ const defaults: SignOptions = {
 
 class TokenManager {
   public accessTokenSignOptions: SignOptions & { secret: string } = {
-    expiresIn: "15m",
+    expiresIn: "1m",
     secret: process.env.JWT_SECRET,
   };
 

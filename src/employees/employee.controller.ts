@@ -5,10 +5,12 @@ import { employeeModel } from "./employee.model";
 import { CreateEmployeeDto } from "./employee.dto";
 import { NotFoundException } from "../exceptions/notfound.exception";
 import { IEmployee } from "./employee.interface";
+import EmployeeService from "./employee.service";
 
 export class EmployeeController implements IController {
   public path: string = "/employee";
   public router: Router = Router();
+  private employeeService = new EmployeeService();
   private employee = employeeModel;
 
   constructor() {
@@ -78,11 +80,7 @@ export class EmployeeController implements IController {
     try {
       const { id } = req.params;
 
-      const employee = await this.employee.findById(id);
-
-      if (!employee) {
-        return next(new NotFoundException(`employee #${id} not found`));
-      }
+      const { employee } = await this.employeeService.getEmployee(id)
 
       res.send(employee);
     } catch (err) {
@@ -131,7 +129,7 @@ export class EmployeeController implements IController {
     next: NextFunction
   ) => {
     try {
-      const employees = await this.employee.find();
+      const { employees } = await this.employeeService.getEmployees();
       res.send(employees);
     } catch (err) {
       next(err);
@@ -200,8 +198,7 @@ export class EmployeeController implements IController {
     try {
       const employeeData: CreateEmployeeDto = req.body;
 
-      const employee = new this.employee(employeeData);
-      await employee.save();
+      const { employee } = await this.employeeService.createNewEmployee(employeeData)
 
       res.status(201).send(employee);
     } catch (err) {
