@@ -223,6 +223,7 @@ export class AuthenticationController implements IController {
     next: NextFunction
   ) => {
     const { verificationId } = request.params;
+    const { rememberMe } = request.query
     try {
       const result = await this.authenticationService.firstStepVerification(
         verificationId
@@ -237,7 +238,7 @@ export class AuthenticationController implements IController {
       response.redirect(
         `${
           process.env.APP_FRONT_URL
-        }/stepVerification?email=${encodeURIComponent(user.email)}`
+        }/stepVerification?email=${encodeURIComponent(user.email)}&rememberMe=${rememberMe || false}`
       );
     } catch (error) {
       next(error);
@@ -325,12 +326,13 @@ export class AuthenticationController implements IController {
     response: Response,
     next: NextFunction
   ) => {
-    const { email, otpCode }: { email: string; otpCode: string } = request.body;
+    const { email, otpCode, rememberMe }: { email: string; otpCode: string, rememberMe: boolean } = request.body;
     try {
       const { user, accessToken, refreshToken } =
-        await this.authenticationService.secondStepVerification(email, otpCode);
+        await this.authenticationService.secondStepVerification(email, otpCode, rememberMe);
 
       this.cookiesManager.setAuthCookies({
+        rememberMe,
         response,
         refreshToken,
       });

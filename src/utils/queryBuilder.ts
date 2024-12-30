@@ -36,7 +36,7 @@ export class QueryBuilder {
     }
 
     if (this.category) {
-      this.filterQuery.category = this.category;
+      this.filterQuery.category = {$regex: new RegExp(`^${this.category}$`, 'i')}
     }
 
     if (

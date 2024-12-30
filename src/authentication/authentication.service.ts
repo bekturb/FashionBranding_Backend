@@ -48,7 +48,7 @@ class AuthenticationService {
       expiresAt: oneYearFromNow(),
     });
 
-    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
+    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}?rememberMe=${userData.rememberMe}`;
 
     await this.emailService.sendVerificationEmail(user.email, url);
     return {
@@ -94,7 +94,7 @@ class AuthenticationService {
     };
   }
 
-  public async secondStepVerification(email: string, otpCode: string) {
+  public async secondStepVerification(email: string, otpCode: string, rememberMe: boolean = false) {
     const storedOtp = await this.otp.findOne({ email });
     if (!storedOtp || new Date() > storedOtp.expiresAt) {
       throw new NotFoundException("Invalid or expired OTP code");
@@ -118,7 +118,7 @@ class AuthenticationService {
       {
         userId: user._id,
       },
-      this.tokenManager.refreshTokenSignOptions
+      rememberMe ? this.tokenManager.rememberRefreshTokenSignOptions : this.tokenManager.refreshTokenSignOptions
     );
 
     const accessToken = this.tokenManager.signToken({

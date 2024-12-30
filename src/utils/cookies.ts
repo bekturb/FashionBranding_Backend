@@ -1,5 +1,5 @@
 import { CookieOptions, Response } from "express";
-import { fifteenMinutesFromNow, thirtyDaysFromNow } from "./date";
+import { sevenDaysFromNow, thirtyDaysFromNow } from "./date";
 
 export const REFRESH_PATH = "/auth/refresh";
 
@@ -10,6 +10,7 @@ const DEFAULT_COOKIE_OPTIONS: CookieOptions = {
 };
 
 type AuthCookiesParams = {
+  rememberMe?: boolean,
   response: Response;
   refreshToken: string;
 };
@@ -17,10 +18,10 @@ type AuthCookiesParams = {
 class CookiesManager {
 
   public setAuthCookies(params: AuthCookiesParams): void {
-    const { response, refreshToken } = params;
+    const { response, refreshToken, rememberMe = false } = params;    
 
     response
-      .cookie("refreshToken", refreshToken, this.getRefreshTokenCookieOptions());
+      .cookie("refreshToken", refreshToken, rememberMe ? this.getRememberRefreshTokenCookieOptions() : this.getRefreshTokenCookieOptions());
   }
 
   public clearAuthCookies(response: Response): void {
@@ -28,17 +29,18 @@ class CookiesManager {
       .clearCookie("refreshToken", { path: REFRESH_PATH });
   }
 
-  private getAccessTokenCookieOptions(): CookieOptions {
+  private getRememberRefreshTokenCookieOptions(): CookieOptions {
     return {
       ...DEFAULT_COOKIE_OPTIONS,
-      expires: fifteenMinutesFromNow(),
+      expires: thirtyDaysFromNow(),
+      path: REFRESH_PATH,
     };
   }
 
   private getRefreshTokenCookieOptions(): CookieOptions {
     return {
       ...DEFAULT_COOKIE_OPTIONS,
-      expires: thirtyDaysFromNow(),
+      expires: sevenDaysFromNow(),
       path: REFRESH_PATH,
     };
   }
