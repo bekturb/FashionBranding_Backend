@@ -1,9 +1,7 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { IController } from "../interfaces/controller.interface";
 import { IApplicationRequest } from "./applicationRequest.interface";
-import {
-  CreateApplicationRequestDto,
-} from "./applicationRequest.dto";
+import { CreateApplicationRequestDto } from "./applicationRequest.dto";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
 import ApplicationRequestService from "./applicationRequest.service";
@@ -25,10 +23,7 @@ export class ApplicationRequestController implements IController {
       validationMiddleware(CreateApplicationRequestDto),
       this.createApplicationRequest
     );
-    this.router.patch(
-      `${this.path}/:id/seen`,
-      this.updateApplicationRequest
-    );
+    this.router.patch(`${this.path}/:id/seen`, this.updateApplicationRequest);
     this.router.delete(`${this.path}/:id`, this.deleteApplicationRequest);
   }
 
@@ -372,16 +367,13 @@ export class ApplicationRequestController implements IController {
     res: Response,
     next: NextFunction
   ) => {
+    const { id } = req.params;
+
     try {
-      const { id } = req.params;
-      const { deletedApplicationRequest } =
-        await this.applicationRequestService.deleteApplicationReq(id);
-      res
-        .status(204)
-        .send({
-          data: deletedApplicationRequest,
-          message: "Successfully deleted",
-        });
+       await this.applicationRequestService.deleteApplicationReq(id);
+      res.status(204).send({
+        message: "Successfully deleted",
+      });
     } catch (err) {
       next(err);
     }

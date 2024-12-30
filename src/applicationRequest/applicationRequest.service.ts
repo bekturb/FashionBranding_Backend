@@ -82,7 +82,6 @@ class ApplicationRequestService {
     if (!deletedApplicationRequest) {
       throw new ApplicationRequestNotFoundException(id);
     }
-    return { deletedApplicationRequest };
   }
 }
 

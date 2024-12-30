@@ -329,7 +329,7 @@ class AuthenticationService {
       expiresAt,
     });
 
-    const url = `${process.env.APP_URL}/password/reset?code=${
+    const url = `${process.env.APP_FRONT_URL}/newForgetPassword?code=${
       verificationCode._id
     }&exp=${expiresAt.getTime()}`;
     await this.emailService.sendResetPassworUrl(user.email, url);
