@@ -24,7 +24,7 @@ export const options = {
     ],
     servers: [
       {
-        url: 'https://fashionbranding-backend-1.onrender.com',
+        url: 'http://localhost:5000',
       },
     ],
   },

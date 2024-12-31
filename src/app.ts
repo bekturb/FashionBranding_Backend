@@ -5,11 +5,12 @@ import * as cookieParser from "cookie-parser";
 import * as session from "express-session";
 import * as cors from "cors";
 import GoogleAuth from "./utils/googleAuth";
-import mongoose from "mongoose";
 import { IController } from "./interfaces/controller.interface";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { swaggerSpec } from "./swagger";
 import { corsOptions } from "./utils/cors.option";
+import { connectToMongo } from "./lib/db";
+import "./cron/cleanup";
 
 export class App {
   public app: express.Application;
@@ -57,8 +58,6 @@ export class App {
   }
 
   private connectToTheDatabase() {
-    const { MONGO_PATH } = process.env;
-    mongoose.set("strictQuery", false);
-    mongoose.connect(MONGO_PATH);
+    connectToMongo()
   }
 }

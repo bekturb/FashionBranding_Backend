@@ -1,7 +1,7 @@
 import { model, Schema } from "mongoose";
 import { IRequest } from "./request.interface";
 
-const RequestSchema = new Schema<IRequest>({
+const requestSchema = new Schema<IRequest>({
   name: {
     type: String,
     required: true,
@@ -32,6 +32,6 @@ const RequestSchema = new Schema<IRequest>({
 
 export const requestModel = model<IRequest>(
   "RequestCode",
-  RequestSchema,
+  requestSchema,
   "request_codes"
 );

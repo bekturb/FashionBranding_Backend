@@ -16,6 +16,12 @@ export const sevenDaysFromNow = () =>
 
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+export function getTimeTwoMonthAgo() {
+  const twoMonthsAgo = new Date();
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+  return twoMonthsAgo;
+}
+
 export function getWeekRange(startOfWeek = 1) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

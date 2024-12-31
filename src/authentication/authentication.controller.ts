@@ -402,10 +402,10 @@ export class AuthenticationController implements IController {
     const logInData: LogInDto = request.body;
 
     try {
-      const { accessToken, refreshToken, user } =
-        await this.authenticationService.login(logInData, response);
+      const { accessToken, refreshToken, user, status, message } =
+        await this.authenticationService.login(logInData);
 
-      response.status(200).send({ accessToken, refreshToken, user });
+      response.status(status).send({ accessToken, refreshToken, user, message});
     } catch (error) {
       next(error);
     }

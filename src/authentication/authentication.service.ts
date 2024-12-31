@@ -179,7 +179,7 @@ class AuthenticationService {
     };
   }
 
-  public async login(logInData: LogInDto, response: Response) {
+  public async login(logInData: LogInDto) {
 
     const {email, password, rememberMe} = logInData
 
@@ -208,10 +208,11 @@ class AuthenticationService {
 
       await this.emailService.sendVerificationEmail(user.email, url);
 
-      response.status(403).send({
+      return {
         user,
         message: `User is not verified. A new verification email has been sent to ${user.email}.`,
-      });
+        status: 403
+      };
     }
 
     const refreshToken = this.tokenManager.signToken(
@@ -225,7 +226,7 @@ class AuthenticationService {
       userId: user._id,
     });
 
-    return { accessToken, refreshToken, user };
+    return { accessToken, refreshToken, user, message: "Successfully logged In!", status: 200};
   }
 
   public async loginWithGoogle(profile) {
