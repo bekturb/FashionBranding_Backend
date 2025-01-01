@@ -61,10 +61,18 @@ class VisitorService {
       if (visitsLastWeek.length > 0) lastWeekCount++;
     });
 
+    let percentageChange = 0;
+    if (lastWeekCount > 0) {
+      percentageChange = ((thisWeekCount - lastWeekCount) / lastWeekCount) * 100;
+    } else if (thisWeekCount > 0) {
+      percentageChange = 100;
+    }
+
     return {
       data: {
         thisWeek: thisWeekCount,
         lastWeek: lastWeekCount,
+        percentage: percentageChange
       },
     };
   }
