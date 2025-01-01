@@ -14,7 +14,7 @@ export class VisitorController implements IController {
   public initializeRoutes() {
     this.router.post(`${this.path}/track`, this.createVisitorTrack);
     this.router.get(`${this.path}/compare-weeks`, this.getVisitorsCompareWeeks);
-    // this.router.get(`${this.path}/chart-visitors`, this.getChartVisitors);
+    this.router.get(`${this.path}/chart-visitors`, this.getChartVisitors);
   }
 
   /**
@@ -128,20 +128,20 @@ export class VisitorController implements IController {
     }
   };
 
-  // private getChartVisitors: (
-  //   req: Request,
-  //   res: Response,
-  //   next: NextFunction
-  // ) => void = async (req, res, next) => {
-  //   try {
-  //     const visitors = await this.visitorService.getChartVisitors();
+  private getChartVisitors: (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => void = async (req, res, next) => {
+    try {
+      const { visitors } = await this.visitorService.getChartVisitorsByWeek();
 
-  //     res.status(200).send({
-  //       message: "Weekly comparison retrieved successfully",
-  //       data: visitors.data,
-  //     });
-  //   } catch (err) {
-  //     next(err);
-  //   }
-  // };
+      res.status(200).send({
+        message: "Weekly comparison retrieved successfully",
+        data: visitors,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
