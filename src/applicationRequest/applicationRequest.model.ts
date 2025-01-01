@@ -18,6 +18,7 @@ const applicationRequestSchema = new Schema(
       virtuals: true,
       getters: true,
     },
+    timestamps: true,
   },
 );
 

@@ -24,7 +24,7 @@ export const options = {
     ],
     servers: [
       {
-        url: 'https://vdlflc8t-5000.euw.devtunnels.ms/',
+        url: 'https://fashionbranding-backend.onrender.com',
       },
     ],
   },

@@ -15,7 +15,7 @@ const clothingSchema = new Schema(
     material: String,
     description: String,
     creatorId: {
-      type: Object, //mongoose.Schema.Types.ObjectId,
+      type: Object,
       ref: 'Admin',
       required: true,
     },
