@@ -9,7 +9,6 @@ import { ApplicationRequestController } from './applicationRequest/applicationRe
 import { EmployeeController } from './employees/employee.controller';
 import { NotificationController } from './notification/notification.controller';
 import { NewsletterController } from './newsletter/newsletter.controller';
-import { FileController } from './s3/s3.controller';
 import { VisitorController } from './visitor/visitor.controller';
 
 const app = new App([
@@ -23,7 +22,6 @@ const app = new App([
   new NotificationController(),
   new NewsletterController(),
   new VisitorController(),
-  new FileController(),
 ]);
 
 app.listen();
