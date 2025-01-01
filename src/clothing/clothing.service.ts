@@ -1,4 +1,4 @@
-import mongoose, { PipelineStage } from "mongoose";
+import { PipelineStage } from "mongoose";
 import { clothingModel } from "./clothing.model";
 import { ClothingNotFoundException } from "../exceptions/clothingNotFound.exception";
 import { QueryBuilder } from "../utils/queryBuilder";
@@ -9,9 +9,8 @@ import { newsletterModel } from "../newsletter/newsletter.module";
 
 class ClothingService {
   public clothing = clothingModel;
-    private newsletter = newsletterModel;
-  private emailService = new EmailService();
-  private mongoose = mongoose;
+  public newsletter = newsletterModel;
+  public emailService = new EmailService();
   public;
 
   public async getCollection(id: string) {
@@ -175,8 +174,8 @@ class ClothingService {
     return { newClothing };
   }
 
-  public async updateCollection(id: string) {
-    const updatedClothing = await this.clothing.findByIdAndUpdate(id);
+  public async updateCollection(id: string, collectionData: IClothing) {
+    const updatedClothing = await this.clothing.findByIdAndUpdate(id, collectionData, { new: true });
 
       if (!updatedClothing) {
         throw new ClothingNotFoundException(id);

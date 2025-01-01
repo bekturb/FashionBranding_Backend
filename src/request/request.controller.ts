@@ -1,21 +1,14 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { requestModel } from "./request.model";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateRequestDto } from "./request.dto";
 import { IController } from "../interfaces/controller.interface";
 import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
-import { ApplicationRequestNotFoundException } from "../exceptions/applicationRequestNotFound.exception";
-import { QueryBuilder } from "../utils/queryBuilder";
-import { notificationModel } from "../notification/notification.model";
-import mongoose, { PipelineStage } from "mongoose";
-import { getWeekRange } from "../utils/date";
+import RequestService from "./request.service";
 
 export class RequestController implements IController {
   public path: string = "/request";
   public router: Router = Router();
-  private request = requestModel;
-  private notification = notificationModel;
-  private mongoose = mongoose;
+  public requestService = new RequestService();
 
   constructor() {
     this.initializeRoutes();
@@ -109,28 +102,11 @@ export class RequestController implements IController {
     res: Response,
     next: NextFunction
   ) => {
-    const session = await this.mongoose.startSession();
-    session.startTransaction();
-
     try {
       const requestData: CreateRequestDto = req.body;
-
-      const request = new this.request(requestData);
-      const notification = new this.notification({
-        owner: requestData.name,
-        type: requestData.type,
-      });
-
-      await request.save({ session });
-      await notification.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
-
+      const { request } = await this.requestService.addRequest(requestData);
       res.status(201).send(request);
     } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
       next(err);
     }
   };
@@ -213,17 +189,10 @@ export class RequestController implements IController {
     next: NextFunction
   ) => {
     try {
-      const queryBuilder = new QueryBuilder(req.query);
+      const requestQueries: IRequestsQuery = req.query;
 
-      const skip = queryBuilder.getSkip();
-      const limit = queryBuilder.getLimit();
-      const filters = queryBuilder.getFilters();
-      const page = queryBuilder.getPage();
-
-      const [requests, total] = await Promise.all([
-        this.request.find(filters).skip(skip).limit(limit),
-        this.request.countDocuments(),
-      ]);
+      const { requests, total, page, limit } =
+        await this.requestService.getRequests(requestQueries);
 
       res.status(200).send({
         data: requests,
@@ -275,74 +244,14 @@ export class RequestController implements IController {
     next: NextFunction
   ) => {
     try {
-      const currentDate = new Date();
-      const last9Months = [];
-
-      for (let i = 8; i >= 0; i--) {
-        const date = new Date();
-        date.setMonth(currentDate.getMonth() - i);
-        last9Months.push(date.toISOString().slice(0, 7));
-      }
-
-      const pipeline: PipelineStage[] = [
-        {
-          $match: {
-            createdAt: {
-              $gte: new Date(new Date().setMonth(currentDate.getMonth() - 9)),
-            },
-          },
-        },
-        {
-          $project: {
-            month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-          },
-        },
-        {
-          $group: {
-            _id: "$month",
-            count: { $sum: 1 },
-          },
-        },
-        {
-          $sort: { _id: 1 },
-        },
-      ];
-
-      const result = await this.request.aggregate(pipeline);
-
-      const monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-
-      const data = last9Months.map((month) => {
-        const monthData = result.find((entry) => entry._id === month);
-        const monthIndex = parseInt(month.slice(5, 7), 10) - 1;
-        return {
-          name: monthNames[monthIndex],
-          pv: monthData ? monthData.count * 10 : 0,
-          amt: monthData ? monthData.count : 0,
-          uv: monthData ? monthData.count : 0,
-        };
-      });
-
+      const { data } = await this.requestService.hanldeChartRequests();
       res.status(200).send(data);
     } catch (err) {
       next(err);
     }
   };
 
-        /**
+  /**
    * @swagger
    * /request/get-requests/by-week:
    *   get:
@@ -358,13 +267,13 @@ export class RequestController implements IController {
    *             schema:
    *               type: object
    *               properties:
-   *                 thisWeek: 
+   *                 thisWeek:
    *                    type: number
    *                    example: 25
-   *                 lastWeek: 
+   *                 lastWeek:
    *                    type: number
    *                    example: 0
-   *                 percentageChange: 
+   *                 percentageChange:
    *                    type: string
    *                    example: 100.00
    */
@@ -375,53 +284,14 @@ export class RequestController implements IController {
     next: NextFunction
   ) => {
     try {
-      const { thisWeek, previousWeek } = getWeekRange()
+      const { thisWeekData, lastWeekData, percentageChange } =
+        await this.requestService.handleWeekRequests();
 
-      const pipeline = [
-        {
-          $match: {
-            createdAt: {
-              $gte: previousWeek.start,
-              $lte: thisWeek.end,
-            },
-          },
-        },
-        {
-          $project: {
-            week: {
-              $cond: [
-                { $gte: ["$createdAt", thisWeek.start] },
-                "thisWeek",
-                "lastWeek",
-              ],
-            },
-          },
-        },
-        {
-          $group: {
-            _id: "$week",
-            count: { $sum: 1 },
-          },
-        },
-      ];
-      
-      const result = await this.request.aggregate(pipeline);
-
-    const thisWeekData = result.find((entry) => entry._id === "thisWeek")?.count || 0;
-    const lastWeekData = result.find((entry) => entry._id === "lastWeek")?.count || 0;
-
-    let percentageChange = 0;
-    if (lastWeekData > 0) {
-      percentageChange = ((thisWeekData - lastWeekData) / lastWeekData) * 100;
-    } else if (thisWeekData > 0) {
-      percentageChange = 100;
-    }
-
-    res.status(200).send({
-      thisWeek: thisWeekData,
-      lastWeek: lastWeekData,
-      percentageChange: percentageChange.toFixed(2),
-    });
+      res.status(200).send({
+        thisWeek: thisWeekData,
+        lastWeek: lastWeekData,
+        percentageChange: percentageChange.toFixed(2),
+      });
     } catch (err) {
       next(err);
     }
@@ -483,11 +353,7 @@ export class RequestController implements IController {
     try {
       const { id } = req.params;
 
-      const request = await this.request.findById(id);
-
-      if (!request) {
-        return next(new ApplicationRequestNotFoundException(id));
-      }
+      const { request } = await this.requestService.getRequest(id);
 
       res.send(request);
     } catch (err) {
@@ -535,13 +401,7 @@ export class RequestController implements IController {
   ) => {
     try {
       const { id } = req.params;
-
-      const request = await this.request.findByIdAndDelete(id);
-
-      if (!request) {
-        return next(new ApplicationRequestNotFoundException(id));
-      }
-
+      const { request } = await this.requestService.removeRequest(id);
       res.status(204).send(request);
     } catch (err) {
       next(err);
@@ -589,15 +449,9 @@ export class RequestController implements IController {
     try {
       const { id } = req.params;
 
-      const request = await this.request.findByIdAndUpdate(id, {
-        seen: true,
-      });
+      const { request } = await this.requestService.updateRequestSeenStatus(id);
 
-      if (!request) {
-        return next(new ApplicationRequestNotFoundException(id));
-      }
-
-      res.status(200).send({ message: "Updated successfully" });
+      res.status(200).send({ request, message: "Updated successfully" });
     } catch (error) {
       next(error);
     }

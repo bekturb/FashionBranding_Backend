@@ -1,18 +1,15 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { IController } from "../interfaces/controller.interface";
-import { clothingModel } from "./clothing.model";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateClothingDto, UpdateClothingDto } from "./clothing.dto";
 import { IClothing } from "./clothing.interface";
-import { ClothingNotFoundException } from "../exceptions/clothingNotFound.exception";
 import ClothingService from "./clothing.service";
 import { IRequestsQuery } from "interfaces/requestsQuery.interface";
 
 export class ClothingController implements IController {
   public path = "/clothing";
   public router = Router();
-  private clothing = clothingModel;
-  private clothingService = new ClothingService();
+  public clothingService = new ClothingService();
 
   constructor() {
     this.initializeRoutes();
@@ -388,8 +385,10 @@ export class ClothingController implements IController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
+      const collectionData: IClothing = req.body;
       const { updatedClothing } = await this.clothingService.updateCollection(
-        id
+        id,
+        collectionData
       );
       res.status(200).send(updatedClothing);
     } catch (err) {

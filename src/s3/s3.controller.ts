@@ -28,42 +28,40 @@ export class FileController implements IController {
 
   private initializeRoutes(): void {
     this.router.post(this.path, this.upload.single('file'), this.uploadFile);
+    /**
+     * @swagger
+     * /file:
+     *   post:
+     *     summary: Upload a file to AWS S3
+     *     description: This endpoint uploads a file to the specified AWS S3 bucket and returns the file URL.
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         multipart/form-data:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               file:
+     *                 type: string
+     *                 format: binary
+     *     responses:
+     *       200:
+     *         description: File uploaded successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 link:
+     *                   type: string
+     *                   description: The URL of the uploaded file
+     *                   example: 'https://your-bucket.s3.amazonaws.com/filename'
+     *       400:
+     *         description: File not found in the request
+     *       500:
+     *         description: Internal server error
+     */
   }
-  /**
-   * @swagger
-   * /file:
-   *   post:
-   *     summary: Upload a file to S3
-   *     tags:
-   *       - S3
-   *     description: This endpoint uploads a file to the specified S3 bucket and returns the file URL.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               file:
-   *                 type: string
-   *                 format: binary
-   *     responses:
-   *       200:
-   *         description: File uploaded successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 link:
-   *                   type: string
-   *                   description: The URL of the uploaded file
-   *                   example: 'https://your-bucket.s3.amazonaws.com/filename'
-   *       400:
-   *         description: File not found in the request
-   *       500:
-   *         description: Internal server error
-   */
 
   private uploadFile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

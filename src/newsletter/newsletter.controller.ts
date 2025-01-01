@@ -1,15 +1,14 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { newsletterModel } from "./newsletter.module";
 import { IController } from "../interfaces/controller.interface";
 import { INewsletter } from "./newsletter.interface";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateNewsletterDto } from "./newsletter.dto";
-import { UserWithThatEmailAlreadyExistsException } from "../exceptions/userWithThatEmailAlreadyExists.exception";
+import NewsletterService from "./newsletter.service";
 
 export class NewsletterController implements IController {
   public path: string = "/newsletter";
   public router: Router = Router();
-  private newsletter = newsletterModel;
+  public newsletterService = new NewsletterService();
 
   constructor() {
     this.initializeRoutes();
@@ -73,15 +72,8 @@ export class NewsletterController implements IController {
   ): Promise<void> => {
     try {
       const newsletterData: INewsletter = req.body;
-      const checkNewsletterEmail = await this.newsletter.findOne({
-        email: newsletterData.email,
-      });
-      if (checkNewsletterEmail) {
-        throw new UserWithThatEmailAlreadyExistsException(newsletterData.email);
-      }
-
-      const newNewsletter = new this.newsletter(newsletterData);
-      await newNewsletter.save();
+      
+      const { newNewsletter } = await this.newsletterService.postNewsletterEmail(newsletterData)
 
       res.status(201).send(newNewsletter);
     } catch (err) {
