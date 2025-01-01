@@ -1,12 +1,11 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { IController } from '../interfaces/controller.interface';
-import { notificationModel } from './notification.model';
-import { NotFoundException } from '../exceptions/notfound.exception';
+import NotificationService from './notification.service';
 
 export class NotificationController implements IController {
   public path: string = '/notification';
   public router: Router = Router();
-  private notification = notificationModel;
+  public notificationService = new NotificationService() 
 
 	constructor() {
 		this.initializeRoutes();
@@ -16,7 +15,6 @@ export class NotificationController implements IController {
         this.router.get(this.path, this.getAllNotifications);
         this.router.delete(`${this.path}/:id`, this.deleteNotification);
   }
-
 
   /**
  * @swagger
@@ -53,7 +51,7 @@ export class NotificationController implements IController {
       next: NextFunction
     ) => {
       try {
-        const notifications = await this.notification.find();
+        const { notifications } = await this.notificationService.getNotifications();
         res.status(200).send(notifications);
         
       } catch (err) {
@@ -97,10 +95,7 @@ export class NotificationController implements IController {
   private deleteNotification = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const deletedNotification = await this.notification.findByIdAndDelete(id);
-      if (!deletedNotification) {
-        return next(new NotFoundException("Not found notifcation"));
-      }
+      await this.notificationService.removeNotification(id)
       res.status(204).send({message: "Notification deleted succesfully"});
     } catch (err) {
       next(err);

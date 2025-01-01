@@ -9,7 +9,7 @@ import ApplicationRequestService from "./applicationRequest.service";
 export class ApplicationRequestController implements IController {
   public path: string = "/application-request";
   public router: Router = Router();
-  private applicationRequestService = new ApplicationRequestService();
+  public applicationRequestService = new ApplicationRequestService();
 
   constructor() {
     this.initializeRoutes();

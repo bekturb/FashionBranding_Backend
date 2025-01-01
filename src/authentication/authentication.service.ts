@@ -21,10 +21,10 @@ import { IUser } from "../user/user.interface";
 class AuthenticationService {
   public user = userModel;
   public verificationCode = verificationCodeModel;
-  private emailService = new EmailService();
+  public emailService = new EmailService();
   public verificationService = new VerificationsService();
-  private tokenManager = new TokenManager();
-  private otp = otpCodeModel;
+  public tokenManager = new TokenManager();
+  public otp = otpCodeModel;
   public;
 
   public async getMe(userId: string) {

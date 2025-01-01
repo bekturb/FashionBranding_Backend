@@ -9,8 +9,8 @@ import NotificationEnum from "../notification/enum/notification.enum";
 
 class ApplicationRequestService {
   public applicationRequest = applicationRequestModel;
-  private notification = notificationModel;
-  private mongoose = mongoose;
+  public notification = notificationModel;
+  public mongoose = mongoose;
   public;
 
   public async getApplicationRequest(id: string) {
