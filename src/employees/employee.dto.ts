@@ -9,6 +9,5 @@ export class CreateEmployeeDto {
   @IsNotEmpty()
   public position: string;
 
-  @IsString()
-  public image: string;
+  public image: Express.Multer.File;
 }

@@ -21,7 +21,7 @@ export class QueryBuilder {
     this.startDate = query.startDate ? new Date(query.startDate) : undefined;
     this.endDate = query.endDate ? new Date(query.endDate) : undefined;
     this.type = query.type;
-     this.category = query.category;
+    this.category = query.category;
 
     this.buildFilters();
   }

@@ -12,14 +12,14 @@ class VisitorService {
   ) {
     const currentTimestamp = new Date();
 
-    const existingVisitor = await this.visitor.findOne({ ip, page });
+    const existingVisitor = await this.visitor.findOne({ userAgent, page });
     if (existingVisitor) {
       existingVisitor.visitHistory.push(currentTimestamp);
       await existingVisitor.save();
       return {
         statusCode: 200,
         response: {
-          message: "Visitor updated successfully",
+          message: "Посетитель успешно обновлен.",
           visitor: existingVisitor,
         },
       };
@@ -36,7 +36,7 @@ class VisitorService {
     return {
       statusCode: 201,
       response: {
-        message: "Visitor tracked successfully",
+        message: "Посетитель успешно отслежен.",
         visitor: newVisitor,
       },
     };

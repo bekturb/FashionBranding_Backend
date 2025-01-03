@@ -18,7 +18,5 @@ export class CreateApplicationRequestDto {
   @IsNotEmpty()
   phoneNumber: string;
 
-  @IsString()
-  @IsNotEmpty()
-  image: string;
+  image: Express.Multer.File;
 }

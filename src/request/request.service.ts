@@ -48,7 +48,7 @@ class RequestService {
 
     const [requests, total] = await Promise.all([
       this.request.find(filters).skip(skip).limit(limit),
-      this.request.countDocuments(),
+      this.request.countDocuments(filters),
     ]);
 
     return { requests, total, page, limit };

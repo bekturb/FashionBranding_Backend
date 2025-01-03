@@ -6,10 +6,12 @@ import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
 import { IApplicationRequest } from "./applicationRequest.interface";
 import { notificationModel } from "../notification/notification.model";
 import NotificationEnum from "../notification/enum/notification.enum";
+import { FileService } from "../s3/s3.service";
 
 class ApplicationRequestService {
   public applicationRequest = applicationRequestModel;
   public notification = notificationModel;
+  public fileService = new FileService();
   public mongoose = mongoose;
   public;
 
@@ -31,21 +33,26 @@ class ApplicationRequestService {
 
     const [applicationRequests, total] = await Promise.all([
       this.applicationRequest.find(filters).skip(skip).limit(limit),
-      this.applicationRequest.countDocuments(),
+      this.applicationRequest.countDocuments(filters),
     ]);
 
     return { applicationRequests, total, page, limit };
   }
 
   public async createNewApplication(
-    applicationRequestData: IApplicationRequest
+    applicationRequestData: IApplicationRequest,
+    fileUrl: string
   ) {
     const session: ClientSession = await this.mongoose.startSession();
     session.startTransaction();
 
     try {
+      const ApplicationRequestDataWithImage = {
+        ...applicationRequestData,
+        image: fileUrl,
+      };
       const newApplicationRequest = new applicationRequestModel(
-        applicationRequestData
+        ApplicationRequestDataWithImage
       );
       const notification = new this.notification({
         owner: applicationRequestData.name,
@@ -58,6 +65,9 @@ class ApplicationRequestService {
       await session.commitTransaction();
       return { newApplicationRequest };
     } catch (error) {
+      if (fileUrl) {
+        await this.fileService.deleteFile(fileUrl);
+      }
       await session.abortTransaction();
       throw error;
     } finally {
@@ -82,6 +92,8 @@ class ApplicationRequestService {
     if (!deletedApplicationRequest) {
       throw new ApplicationRequestNotFoundException(id);
     }
+
+    return { deletedApplicationRequest }
   }
 }
 

@@ -14,6 +14,6 @@ cron.schedule("0 0 * * *", async () => {
     });
 
   } catch (error) {
-    console.error("Error during cleanup task:", error);
+    console.error("Ошибка во время задачи очистки:", error);
   }
 });
