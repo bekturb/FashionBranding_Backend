@@ -1,17 +1,22 @@
 import { NextFunction, Request, Response, Router } from "express";
+import * as multer from "multer";
 import { IController } from "../interfaces/controller.interface";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateClothingDto, UpdateClothingDto } from "./clothing.dto";
 import { IClothing } from "./clothing.interface";
 import ClothingService from "./clothing.service";
 import { IRequestsQuery } from "interfaces/requestsQuery.interface";
+import { FileService } from "../s3/s3.service";
 
 export class ClothingController implements IController {
   public path = "/clothing";
   public router = Router();
   public clothingService = new ClothingService();
+  public fileService = new FileService();
+  private upload: multer.Multer;
 
   constructor() {
+    this.upload = multer({ storage: multer.memoryStorage() });
     this.initializeRoutes();
   }
 
@@ -25,60 +30,18 @@ export class ClothingController implements IController {
     this.router.get(`${this.path}/get-today/clothing`, this.getTodaysClothing);
     this.router.post(
       this.path,
+      this.upload.single("image"),
       validationMiddleware(CreateClothingDto),
       this.createClothing
     );
     this.router.patch(
       `${this.path}/:id`,
+      this.upload.single("image"),
       validationMiddleware(UpdateClothingDto),
       this.updateClothing
     );
     this.router.delete(`${this.path}/:id`, this.deleteClothing);
   }
-
-  /**
-   * @swagger
-   * /clothing/{id}:
-   *   get:
-   *     summary: Get collection by ID
-   *     tags:
-   *       - Collections
-   *     description: Retrieve a collection's details by its unique ID.
-   *     parameters:
-   *       - name: id
-   *         in: path
-   *         required: true
-   *         description: The unique identifier of the collection.
-   *         schema:
-   *           type: string
-   *           example: 64b2f0c7e11a4e6d8b16a8e2
-   *     responses:
-   *       200:
-   *         description: A collection's details.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 id:
-   *                   type: string
-   *                   description: The unique ID of the collection.
-   *                   example: 64b2f0c7e11a4e6d8b16a8e2
-   *                 name:
-   *                   type: string
-   *                   description: The name associated with the collection.
-   *                   example: Bektursun
-   *                 image:
-   *                   type: string
-   *                   description: The image for the collection.
-   *                   example: https://cdn.example.com/images/photo.jpg
-   *                 material:
-   *                   type: string
-   *                   example: Lazer
-   *                   description: The material of collection.
-   *       404:
-   *         description: Collection not found. The collection with the given ID does not exist.
-   */
 
   private getClothingById = async (
     req: Request,
@@ -95,68 +58,6 @@ export class ClothingController implements IController {
       next(err);
     }
   };
-
-  /**
-   * @swagger
-   * /clothing:
-   *   get:
-   *     summary: Get all collections
-   *     tags:
-   *       - Collections
-   *     description: Retrieve a list of all collections with optional filters and pagination.
-   *     parameters:
-   *       - name: page
-   *         in: query
-   *         required: false
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *           description: The page number for pagination.
-   *       - name: limit
-   *         in: query
-   *         required: false
-   *         schema:
-   *           type: integer
-   *           default: 10
-   *           description: The number of items per page.
-   *     responses:
-   *       200:
-   *         description: A list of collections.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: string
-   *                       name:
-   *                         type: string
-   *                       image:
-   *                         type: string
-   *                       category:
-   *                         type: string
-   *                       material:
-   *                         type: string
-   *                       description:
-   *                         type: string
-   *                       meta:
-   *                        type: object
-   *                        properties:
-   *                          total:
-   *                            type: number
-   *                          page:
-   *                            type: number
-   *                          limit:
-   *                            type: number
-   *                          totalPages:
-   *                            type: number
-   *                   description: Total number of matching collections.
-   */
 
   private getAllClothing = async (
     req: Request,
@@ -183,36 +84,6 @@ export class ClothingController implements IController {
     }
   };
 
-  /**
-   * @swagger
-   * /clothing/get-clothing/by-chart:
-   *   get:
-   *     summary: Get collection for chart
-   *     tags:
-   *       - Collections
-   *     description: Retrieve a collection's details for chart.
-   *     responses:
-   *       200:
-   *         description: A collection's details in each month.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 name:
-   *                    type: string,
-   *                    example: Oct
-   *                 pv:
-   *                    type: number,
-   *                    example: 450
-   *                 amt:
-   *                    type: number,
-   *                    example: 22
-   *                 uv:
-   *                    type: number,
-   *                    example: 450
-   */
-
   private getChartCollections = async (
     req: Request,
     res: Response,
@@ -225,33 +96,6 @@ export class ClothingController implements IController {
       next(err);
     }
   };
-
-  /**
-   * @swagger
-   * /clothing/get-today/clothing:
-   *   get:
-   *     summary: Get today's collection
-   *     tags:
-   *       - Collections
-   *     description: Retrieve today's collections.
-   *     responses:
-   *       200:
-   *         description: A collection's details today.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 today:
-   *                    type: number
-   *                    example: 7
-   *                 yesterday:
-   *                    type: number
-   *                    example: 0
-   *                 percentageChange:
-   *                    type: string
-   *                    example: 100.00
-   */
 
   private getTodaysClothing = async (
     req: Request,
@@ -272,94 +116,6 @@ export class ClothingController implements IController {
     }
   };
 
-  /**
-   * @swagger
-   * /clothing:
-   *   post:
-   *     summary: Create a new collection
-   *     tags:
-   *       - Collections
-   *     description: Create a new collection by providing the necessary details (e.g., name).
-   *     requestBody:  # Corrected key
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - name
-   *               - creatorId
-   *               - image
-   *               - category
-   *               - material
-   *               - description
-   *             properties:
-   *               name:
-   *                 type: string
-   *                 description: The name of the person who created the collection.
-   *                 example: Bektursun
-   *               creatorId:
-   *                 type: string
-   *                 description: The creator ID of the creator.
-   *                 example: 64b2f0c7e11a4e6d8b16a8e2
-   *               image:
-   *                 type: string
-   *                 description: The image of the collection.
-   *                 example: https://cdn.example.com/images/photo.jpg
-   *               category:
-   *                 type: string
-   *                 description: The category of the collection.
-   *                 example: Лето
-   *               material:
-   *                 type: string
-   *                 description: The material of the collection.
-   *                 example: кожа
-   *               description:
-   *                 type: string
-   *                 description: The description of the collection.
-   *                 example: Lorem ipsum dolor sita amet
-   *     responses:
-   *       201:
-   *         description: Request created successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 id:
-   *                   type: string
-   *                   description: The unique ID of the newly created collection.
-   *                   example: 64b2f0c7e11a4e6d8b16a8e2
-   *                 name:
-   *                   type: string
-   *                   description: The name of the person who created the collection.
-   *                   example: Bektursun
-   *                 creatorId:
-   *                   type: string
-   *                   description: The creator ID of the creator.
-   *                   example: 64b2f0c7e11a4e6d8b16a8e2
-   *                 image:
-   *                   type: string
-   *                   description: The image of the collection.
-   *                   example: https://cdn.example.com/images/photo.jpg
-   *                 category:
-   *                   type: string
-   *                   description: The category of the collection.
-   *                   example: Лето
-   *                 material:
-   *                   type: string
-   *                   description: The material of the collection.
-   *                   example: кожа
-   *                 description:
-   *                   type: string
-   *                   description: The description of the collection.
-   *                   example: Lorem ipsum dolor sita amet
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       500:
-   *         description: Internal server error.
-   */
-
   private createClothing = async (
     req: Request,
     res: Response,
@@ -367,12 +123,25 @@ export class ClothingController implements IController {
   ): Promise<void> => {
     try {
       const clothingData: IClothing = req.body;
+      const file = req.file;
+      let fileUrl;
 
-      const { newClothing } = await this.clothingService.createNewCollection(
-        clothingData
-      );
+      if (file) {
+        fileUrl = await this.fileService.uploadFile(file);
+      }
 
-      res.status(201).send(newClothing);
+      try {
+        const { newClothing } = await this.clothingService.createNewCollection(
+          clothingData,
+          fileUrl
+        );
+        res.status(201).send(newClothing);
+      } catch (error) {
+        if (fileUrl) {
+          await this.fileService.deleteFile(fileUrl);
+        }
+        next(error);
+      }
     } catch (err) {
       next(err);
     }
@@ -386,48 +155,17 @@ export class ClothingController implements IController {
     try {
       const { id } = req.params;
       const collectionData: IClothing = req.body;
+      const file: Express.Multer.File = req.file
       const { updatedClothing } = await this.clothingService.updateCollection(
         id,
-        collectionData
+        collectionData,
+        file
       );
       res.status(200).send(updatedClothing);
     } catch (err) {
       next(err);
     }
   };
-
-  /**
-   * @swagger
-   * /clothing/{id}:
-   *   delete:
-   *     summary: Delete a collection
-   *     tags:
-   *       - Collections
-   *     description: Deletes a collection identified by its unique ID.
-   *     parameters:
-   *       - name: id
-   *         in: path
-   *         required: true
-   *         description: The unique identifier of the collection to delete.
-   *         schema:
-   *           type: string
-   *           example: 64b2f0c7e11a4e6d8b16a8e2
-   *     responses:
-   *       200:
-   *         description: Collection deleted successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Collection deleted successfully.
-   *       404:
-   *         description: Collection not found. The collection with the given ID does not exist.
-   *       500:
-   *         description: Internal server error. An error occurred while processing the request.
-   */
 
   private deleteClothing = async (
     req: Request,
@@ -437,9 +175,13 @@ export class ClothingController implements IController {
     try {
       const { id } = req.params;
 
-      await this.clothingService.deleteCollection(id);
-      
-      res.status(200).send({ message: "Successfully deleted" });
+      const { deletedClothing } = await this.clothingService.deleteCollection(id);
+
+      if (deletedClothing.image) {
+        await this.fileService.deleteFile(deletedClothing.image);
+      }
+
+      res.status(200).send({ message: "Успешно удалено." });
     } catch (err) {
       next(err);
     }

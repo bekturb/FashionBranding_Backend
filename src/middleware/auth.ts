@@ -12,12 +12,12 @@ export function authMiddleware(
   try {
     const authHeader = req.header("Authorization");
     if (!authHeader) {
-      throw new HttpException(401, "Authorization header is missing");
+      throw new HttpException(401, "Заголовок авторизации отсутствует.");
     }
 
     const [scheme, token] = authHeader.split(" ");
     if (scheme !== "Bearer" || !token) {
-      throw new HttpException(400, "Invalid Authorization format");
+      throw new HttpException(400, "Неверный формат авторизации.");
     }
 
     const { payload, error } = tokenManager.verifyToken(token, {
@@ -25,7 +25,7 @@ export function authMiddleware(
     });
 
     if (error) {
-      throw new HttpException(401, `Invalid token: ${error}`);
+      throw new HttpException(401, `Неверный токен: ${error}`);
     }
 
     req.user = payload    

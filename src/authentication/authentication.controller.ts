@@ -12,6 +12,7 @@ import VerificationsService from "./verifications.service";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import { authMiddleware } from "../middleware/auth";
 import { IUser } from "../user/user.interface";
+import { RefreshAccessTokenDto } from "./refreshToken.dto";
 
 export class AuthenticationController implements IController {
   public path = "/auth";
@@ -51,7 +52,7 @@ export class AuthenticationController implements IController {
       `${this.path}/resend/verification-code/:email`,
       this.resendVerificationCode
     );
-    this.router.post(`${this.path}/refresh`, this.refreshToken);
+    this.router.post(`${this.path}/refresh`, validationMiddleware(RefreshAccessTokenDto), this.refreshToken);
     this.router.post(
       `${this.path}/password/reset`,
       validationMiddleware(ResetPasswordDto),
@@ -69,50 +70,6 @@ export class AuthenticationController implements IController {
     );
   }
 
-  /**
-   * @swagger
-   * /auth/register:
-   *   post:
-   *     summary: Register a new user
-   *     tags:
-   *       - Authentication
-   *     description: Register a new user by providing their username, email, and password. A confirmation message or email will be sent to the provided email address.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               username:
-   *                 type: string
-   *                 example: Bektursun
-   *                 description: The username of the new user.
-   *               email:
-   *                 type: string
-   *                 example: bekkgboy2@gmail.com
-   *                 description: The email address of the new user.
-   *               password:
-   *                 type: string
-   *                 example: securepassword123
-   *                 description: The password for the new user.
-   *     responses:
-   *       201:
-   *         description: User registered successfully. A confirmation message has been sent to the user's email.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: "Registration successful. A confirmation email has been sent to bekkgboy2@gmail.com."
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       409:
-   *         description: Email is already in use.
-   */
-
   private registration = async (
     request: Request,
     response: Response,
@@ -121,58 +78,11 @@ export class AuthenticationController implements IController {
     const userData: CreateUserDto = request.body;
     try {
       const { user } = await this.authenticationService.register(userData);
-      response.status(201).send({user, message: "Sent verification link to your email"});
+      response.status(201).send({user, message: "Ссылка для проверки отправлена на вашу электронную почту!"});
     } catch (error) {
       next(error);
     }
   };
-
-/**
- * @swagger
- * /auth/me:
- *   get:
- *     summary: Get user profile
- *     description: Retrieve the profile of the authenticated user based on the provided token.
- *     tags:
- *       - Authentication
- *     security:
- *       - bearerAuth: [] # Updated to use a common security scheme name like "bearerAuth"
- *     parameters:
- *       - in: header
- *         name: Authorization
- *         required: true
- *         description: "Bearer token for authentication. Example: `Bearer <your_token>`"
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Successfully retrieved user profile
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 _id:
- *                   type: string
- *                   example: "12345"
- *                 username:
- *                   type: string
- *                   example: "john_doe"
- *                 email:
- *                   type: string
- *                   example: "john@example.com"
- *                 isConfirmed:
- *                   type: boolean
- *                   example: true
- *                 image:
- *                   type: string
- *                   example: "jdjdjd.jpeg"
- *       401:
- *         description: Unauthorized - Token missing or invalid
- *       500:
- *         description: Internal Server Error
- */
-
 
   private getMyProfile = async (
     request: Request & { user?: DataStoredInToken },
@@ -188,31 +98,6 @@ export class AuthenticationController implements IController {
       next(error);
     }
   };
-
-  /**
-   * @swagger
-   * /auth/email/verify/{verificationId}:
-   *   get:
-   *     summary: Send otp code to user's email
-   *     tags:
-   *       - Authentication
-   *     description: Find a user by verificationId. A Otpcode message will be sent to the provided email address.
-   *     responses:
-   *       201:
-   *         description: Verification OTP code sent to your email.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Verification OTP code sent to your email bekkgboy2@gmail.com."
-   *       400:
-   *         description: Invalid or expired verification code.
-   *       404:
-   *         description: User not found.
-   */
 
   private firstStepVerify = async (
     request: Request,
@@ -252,71 +137,11 @@ export class AuthenticationController implements IController {
       const { user } = await this.authenticationService.handleResendCode(email);
       response
         .status(201)
-        .send({ user, message: "Sent verification link to your email" });
+        .send({ user, message: "Ссылка для проверки отправлена на вашу электронную почту" });
     } catch (error) {
       next(error);
     }
   };
-
-  /**
-   * @swagger
-   * /auth/email/verify:
-   *   post:
-   *     summary: Verify email using OTP code
-   *     tags:
-   *       - Authentication
-   *     description: Verify a new user's email by providing their email and OTP code. If successful, the endpoint returns the user details and an access token.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 example: bekkgboy2@gmail.com
-   *                 description: The email address of the new user.
-   *               otpCode:
-   *                 type: string
-   *                 example: 1223
-   *                 description: The OTP code sent to the user's email.
-   *     responses:
-   *       200:
-   *         description: User verified successfully. Returns user data and access token.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 user:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       example: 64b2f0c7e11a4e6d8b16a8e2
-   *                       description: The unique ID of the user.
-   *                     username:
-   *                       type: string
-   *                       example: Bektursun
-   *                       description: The name of the user.
-   *                     email:
-   *                       type: string
-   *                       example: bekkgboy2@gmail.com
-   *                       description: The email address of the user.
-   *                     isConfirmed:
-   *                       type: boolean
-   *                       example: true
-   *                       description: The confirmation of the user.
-   *                 refreshToken:
-   *                   type: string
-   *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-   *                   description: The JWT access token.
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       404:
-   *         description: Invalid or expired OTP code.
-   */
 
   private secondStepVerify = async (
     request: Request,
@@ -334,66 +159,6 @@ export class AuthenticationController implements IController {
     }
   };
 
-  /**
-   * @swagger
-   * /auth/login:
-   *   post:
-   *     summary: User login
-   *     tags:
-   *       - Authentication
-   *     description: Authenticate a user by their email and password. Returns user data and a JWT access token.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 example: bekkgboy2@gmail.com
-   *                 description: The email address of the user.
-   *               password:
-   *                 type: string
-   *                 example: mypassword123
-   *                 description: The password of the user.
-   *     responses:
-   *       200:
-   *         description: Login successful. Returns user data and access token.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 user:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       example: 64b2f0c7e11a4e6d8b16a8e2
-   *                       description: The unique ID of the user.
-   *                     username:
-   *                       type: string
-   *                       example: Bektursun
-   *                       description: The name of the user.
-   *                     email:
-   *                       type: string
-   *                       example: bekkgboy2@gmail.com
-   *                       description: The email address of the user.
-   *                 refreshToken:
-   *                   type: string
-   *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-   *                   description: The JWT access token.
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       404:
-   *         description: Incorrect email or password.
-   *       401:
-   *         description: Wrong credentials provided.
-   *       403:
-   *         description: User is not verified. A new verification email has been sent to ${user.email}..
-   */
-
   private loggingIn = async (
     request: Request,
     response: Response,
@@ -410,43 +175,6 @@ export class AuthenticationController implements IController {
       next(error);
     }
   };
-
-    /**
-   * @swagger
-   * /auth/login-with-google:
-   *   get:
-   *     summary: User login with google
-   *     tags:
-   *       - Authentication
-   *     description: Authenticate a user by their gogole. Returns user data and a JWT access token.
-   *     responses:
-   *       200:
-   *         description: Login successful. Returns user data and access token.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 user:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       example: 64b2f0c7e11a4e6d8b16a8e2
-   *                       description: The unique ID of the user.
-   *                     username:
-   *                       type: string
-   *                       example: Bektursun
-   *                       description: The name of the user.
-   *                     email:
-   *                       type: string
-   *                       example: bekkgboy2@gmail.com
-   *                       description: The email address of the user.
-   *                 accessToken:
-   *                   type: string
-   *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-   *                   description: The JWT access token.
-   */
 
   private googleCallbackHandler = async (request:Request & { user?: IUser }, response: Response, next: NextFunction) => {
     try {
@@ -470,43 +198,19 @@ export class AuthenticationController implements IController {
     }
   };
 
-  /**
-   * @swagger
-   * /auth/logout:
-   *   post:
-   *     summary: Log out the user
-   *     tags:
-   *       - Authentication
-   *     description: Clears authentication cookies and logs the user out.
-   *     responses:
-   *       200:
-   *         description: Logout successful.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Logout successful
-   *                   description: Confirmation message for successful logout.
-   *       500:
-   *         description: An internal server error occurred.
-   */
-
   private refreshToken = async (
     request: Request,
     response: Response,
     next: NextFunction
   ) => {
     try {
-      const { refreshToken } = request.body as { refreshToken: string | undefined }      
+      const { refreshToken, rememberMe } = request.body as { refreshToken: string | undefined, rememberMe: boolean }      
 
       const { newAccessToken, newRefreshToken } =
-        await this.authenticationService.refreshUserAccesToken(refreshToken);
+        await this.authenticationService.refreshUserAccesToken(refreshToken, rememberMe);
 
       response.status(200).send({
-        message: "Tokens refreshed successfully.",
+        message: "Токены успешно обновлены.",
         accessToken: newAccessToken,
         refreshToken: newRefreshToken
       });
@@ -514,57 +218,6 @@ export class AuthenticationController implements IController {
       next(error);
     }
   };
-
-  /**
-   * @swagger
-   * /auth/password/reset:
-   *   post:
-   *     summary: Reset user password
-   *     tags:
-   *       - Authentication
-   *     description: Reset a user's password by providing their email, old password, new password, and confirmation password.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 example: bekkgboy2@gmail.com
-   *                 description: The email address of the user requesting a password reset.
-   *               oldPassword:
-   *                 type: string
-   *                 example: oldpassword123
-   *                 description: The user's current password.
-   *               password:
-   *                 type: string
-   *                 example: newpassword123
-   *                 description: The new password to set.
-   *               confirmPassword:
-   *                 type: string
-   *                 example: newpassword123
-   *                 description: The confirmation of the new password.
-   *     responses:
-   *       200:
-   *         description: Password reset successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Password reset successfully
-   *                   description: Confirmation message for the successful password reset.
-   *       400:
-   *         description: Invalid input or validation errors (e.g., mismatched passwords).
-   *       404:
-   *         description: User not found or incorrect old password.
-   *       500:
-   *         description: An internal server error occurred.
-   */
 
   private resetPassword = async (
     request: Request,
@@ -576,49 +229,11 @@ export class AuthenticationController implements IController {
 
       await this.authenticationService.resetUserPassword(resetPasswordData);
 
-      response.status(200).send({ message: "Password reset successfully" });
+      response.status(200).send({ message: "Пароль успешно сброшен."});
     } catch (error) {
       next(error);
     }
   };
-
-  /**
-   * @swagger
-   * /auth/forget/password:
-   *   post:
-   *     summary: Send password reset email
-   *     tags:
-   *       - Authentication
-   *     description: Sends a password reset email to the user with a reset URL.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 example: user@example.com
-   *                 description: The email address of the user.
-   *     responses:
-   *       200:
-   *         description: Password reset email sent successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: A password reset email has been sent to user@example.com.
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       404:
-   *         description: User not found with the provided email.
-   *       429:
-   *         description: Too many requests, please try again later.
-   */
 
   private sendPasswordReset = async (
     request: Request,
@@ -633,52 +248,12 @@ export class AuthenticationController implements IController {
       );
 
       response.status(200).send({
-        message: `A password reset email has been sent to ${user.email}.`,
+        message: `На вашу ${user.email} электронную почту отправлено письмо для сброса пароля.`,
       });
     } catch (error) {
       next(error);
     }
   };
-
-  /**
-   * @swagger
-   * /auth/reset-password:
-   *   post:
-   *     summary: Reset forgotten password
-   *     tags:
-   *       - Authentication
-   *     description: Allows users to reset their forgotten password by providing a valid verification code and a new password.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               verificationCode:
-   *                 type: string
-   *                 example: 64b2f0c7e11a4e6d8b16a8e2
-   *                 description: The unique verification code for resetting the password.
-   *               password:
-   *                 type: string
-   *                 example: NewPassword123!
-   *                 description: The new password for the user.
-   *     responses:
-   *       200:
-   *         description: Password reset successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Password reset successfully.
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       404:
-   *         description: Invalid or expired verification code, or user not found.
-   */
 
   private resetForgotenPassword = async (
     request: Request,
@@ -692,7 +267,7 @@ export class AuthenticationController implements IController {
         resetForgotenPasswordData
       );
 
-      response.status(200).send({ message: "Password reset successfully" });
+      response.status(200).send({ message: "Пароль успешно сброшен." });
     } catch (error) {
       next(error);
     }

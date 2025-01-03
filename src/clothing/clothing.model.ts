@@ -7,7 +7,9 @@ const clothingSchema = new Schema(
       type: String,
       required: true,
     },
-    image: String,
+    image: {
+      type: String,
+    },
     category: {
       type: String,
       required: true,

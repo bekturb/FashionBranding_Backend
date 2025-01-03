@@ -1,77 +1,41 @@
 import { NextFunction, Request, Response, Router } from "express";
+import * as multer from "multer";
 import { IController } from "../interfaces/controller.interface";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateEmployeeDto } from "./employee.dto";
 import { IEmployee } from "./employee.interface";
 import EmployeeService from "./employee.service";
+import { FileService } from "../s3/s3.service";
 
 export class EmployeeController implements IController {
   public path: string = "/employee";
   public router: Router = Router();
   public employeeService = new EmployeeService();
+  public fileService = new FileService();
+  private upload: multer.Multer;
 
   constructor() {
+    this.upload = multer({ storage: multer.memoryStorage() });
     this.initializeRoutes();
   }
 
-  public initializeRoutes() {
+  public initializeRoutes(): void {
     this.router.get(`${this.path}/:id`, this.getEmployeeById);
     this.router.get(this.path, this.getAllEmployees);
     this.router.post(
       this.path,
+      this.upload.single("image"),
       validationMiddleware(CreateEmployeeDto),
       this.createEmployee
     );
     this.router.patch(
       `${this.path}/:id`,
+      this.upload.single("image"),
       validationMiddleware(CreateEmployeeDto),
       this.updateEmployee
     );
     this.router.delete(`${this.path}/:id`, this.deleteEmployee);
   }
-
-  /**
-   * @swagger
-   * /employee/{id}:
-   *   get:
-   *     summary: Get employee by ID
-   *     tags:
-   *       - Employees
-   *     description: Retrieve a employee's details by their unique ID.
-   *     parameters:
-   *       - name: id
-   *         in: path
-   *         required: true
-   *         description: The unique identifier of the employee.
-   *         schema:
-   *           type: string
-   *           example: 64b2f0c7e11a4e6d8b16a8e2
-   *     responses:
-   *       200:
-   *         description: A employee's details.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 id:
-   *                   type: string
-   *                   description: The unique identifier of the employee.
-   *                 username:
-   *                   type: string
-   *                   example: Bektursun
-   *                   description: The name of the employee.
-   *                 image:
-   *                   type: string
-   *                   example: https://cdn.example.com/images/photo.jpg
-   *                   description: The email address of the employee.
-   *                 position:
-   *                   type: string
-   *                   example: Head Offactory
-   *                   description: The position of the employee.
-   *       404:
-   *         description: Employee not found.
-   */
 
   private getEmployeeById = async (
     req: Request,
@@ -89,41 +53,6 @@ export class EmployeeController implements IController {
     }
   };
 
-  /**
-   * @swagger
-   * /employee:
-   *   get:
-   *     summary: Get all employees
-   *     tags:
-   *       - Employees
-   *     description: Retrieve a list of all employees.
-   *     responses:
-   *       200:
-   *         description: A list of employees.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 type: object
-   *                 properties:
-   *                   id:
-   *                     type: string
-   *                     description: The unique identifier of the user.
-   *                   username:
-   *                     type: string
-   *                     example: Bektursun
-   *                     description: The name of the user.
-   *                   image:
-   *                     type: string
-   *                     example: https://cdn.example.com/images/photo.jpg
-   *                     description: The email address of the employee.
-   *                   position:
-   *                     type: string
-   *                     example: Head Offactory
-   *                     description: The position of the employee.
-   */
-
   private getAllEmployees = async (
     req: Request,
     res: Response,
@@ -137,141 +66,37 @@ export class EmployeeController implements IController {
     }
   };
 
-  /**
-   * @swagger
-   * /employee:
-   *   post:
-   *     summary: Create a new employee
-   *     tags:
-   *       - Employees
-   *     description: Create a new employee by providing necessary details.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               username:
-   *                 type: string
-   *                 example: Bektursun
-   *                 description: The name of the employee.
-   *               position:
-   *                 type: string
-   *                 example: Head of factory
-   *                 description: The position for the employee.
-   *               image:
-   *                 type: string
-   *                 example: https://cdn.example.com/images/photo.jpg
-   *                 description: The profile image URL of the employee.
-   *     responses:
-   *       201:
-   *         description: Employee created successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 id:
-   *                   type: string
-   *                   description: The unique ID of the newly created employee.
-   *                 username:
-   *                   type: string
-   *                   example: Bektursun
-   *                   description: The name of the employee.
-   *                 position:
-   *                   type: string
-   *                   example: Head of factory
-   *                   description: The position of the employee.
-   *                 image:
-   *                   type: string
-   *                   example: https://cdn.example.com/images/photo.jpg
-   *                   description: The profile image URL of the employee.
-   *       400:
-   *         description: Invalid input or missing parameters.
-   */
-
   private createEmployee = async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const employeeData: CreateEmployeeDto = req.body;
+      const employeeData: IEmployee = req.body;
+      const file = req.file;
+      let fileUrl;
 
-      const { employee } = await this.employeeService.createNewEmployee(
-        employeeData
-      );
+      if (file) {
+        fileUrl = await this.fileService.uploadFile(file);
+      }
 
-      res.status(201).send(employee);
+      try {
+        const { employee } = await this.employeeService.createNewEmployee(
+          employeeData,
+          fileUrl
+        );
+
+        res.status(201).send(employee);
+      } catch (employeeError) {
+        if (fileUrl) {
+          await this.fileService.deleteFile(fileUrl);
+        }
+        next(employeeError);
+      }
     } catch (err) {
       next(err);
     }
   };
-
-  /**
-   * @swagger
-   * /employee/{id}:
-   *   patch:
-   *     summary: Update a employee's details
-   *     tags:
-   *       - Employees
-   *     description: Update a employee's profile information such as username and image.
-   *     parameters:
-   *       - name: id
-   *         in: path
-   *         required: true
-   *         description: The ID of the employee to update.
-   *         schema:
-   *           type: string
-   *           example: 64b2f0c7e11a4e6d8b16a8e2
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               username:
-   *                 type: string
-   *                 example: Bektursun
-   *                 description: The name of the employee.
-   *               position:
-   *                 type: string
-   *                 example: Design lead
-   *                 description: The image URL of the employee.
-   *               image:
-   *                 type: string
-   *                 example: https://cdn.example.com/images/photo.jpg
-   *                 description: The image URL of the employee.
-   *     responses:
-   *       200:
-   *         description: User updated successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 id:
-   *                   type: string
-   *                   description: The unique ID of the employee.
-   *                 username:
-   *                   type: string
-   *                   example: Bektursun
-   *                   description: The updated name of the employee.
-   *                 position:
-   *                   type: string
-   *                   example: Head of factory
-   *                   description: The position of the employee.
-   *                 image:
-   *                   type: string
-   *                   example: https://cdn.example.com/images/photo.jpg
-   *                   description: The updated image URL of the employee.
-   *       400:
-   *         description: Invalid input or missing parameters.
-   *       404:
-   *         description: Employee not found.
-   */
 
   private updateEmployee = async (
     req: Request,
@@ -281,48 +106,17 @@ export class EmployeeController implements IController {
     try {
       const { id } = req.params;
       const userData: IEmployee = req.body;
+      const file: Express.Multer.File = req.file
       const { updatedEmployee } = await this.employeeService.updateEmployeeSvc(
         id,
-        userData
+        userData,
+        file
       );
       res.send(updatedEmployee);
     } catch (err) {
       next(err);
     }
   };
-
-  /**
-   * @swagger
-   * /employee/{id}:
-   *   delete:
-   *     summary: Delete a employee
-   *     tags:
-   *       - Employees
-   *     description: Deletes a employee by their unique ID.
-   *     parameters:
-   *       - name: id
-   *         in: path
-   *         required: true
-   *         description: The unique identifier of the employee to delete.
-   *         schema:
-   *           type: string
-   *           example: 64b2f0c7e11a4e6d8b16a8e2
-   *     responses:
-   *       200:
-   *         description: Employee deleted successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Employee deleted successfully.
-   *       404:
-   *         description: Employee not found.
-   *       500:
-   *         description: Internal server error.
-   */
 
   private deleteEmployee = async (
     req: Request,
@@ -331,8 +125,15 @@ export class EmployeeController implements IController {
   ) => {
     try {
       const { id } = req.params;
-       await this.employeeService.deleteEmployeeSvc(id);
-      res.status(204).send({ message: "Employee succesfully deleted" });
+      const { deletedEmployee } = await this.employeeService.deleteEmployeeSvc(
+        id
+      );
+
+      if (deletedEmployee.image) {
+        await this.fileService.deleteFile(deletedEmployee.image);
+      }
+
+      res.status(204).send({ message: "Сотрудник успешно удален." });
     } catch (err) {
       next(err);
     }

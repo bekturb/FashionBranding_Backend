@@ -1,13 +1,11 @@
 import * as bodyParser from "body-parser";
 import * as express from "express";
-import * as swaggerUi from "swagger-ui-express";
 import * as cookieParser from "cookie-parser";
 import * as session from "express-session";
 import * as cors from "cors";
 import GoogleAuth from "./utils/googleAuth";
 import { IController } from "./interfaces/controller.interface";
 import { errorMiddleware } from "./middleware/error.middleware";
-import { swaggerSpec } from "./swagger";
 import { corsOptions } from "./utils/cors.option";
 import { connectToMongo } from "./lib/db";
 import "./cron/cleanup";
@@ -18,7 +16,6 @@ export class App {
   constructor(controllers: IController[]) {
     this.app = express();
     this.connectToTheDatabase();
-    this.setupSwagger();
     this.initializeMiddlewares();
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
@@ -28,10 +25,6 @@ export class App {
     this.app.listen(process.env.PORT, () => {
       console.log(`App listening on the port ${process.env.PORT}`);
     });
-  }
-
-  private setupSwagger() {
-    this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   }
 
   private initializeMiddlewares() {

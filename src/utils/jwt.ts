@@ -52,7 +52,7 @@ class TokenManager {
     });
 
     if (error || !payload) {
-      return { error: "Invalid or expired refresh token" };
+      return { error: "Неверный или истекший токен обновления." };
     }
 
     const newAccessToken = this.signToken(
