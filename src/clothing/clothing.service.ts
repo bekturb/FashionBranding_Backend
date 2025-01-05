@@ -174,12 +174,13 @@ class ClothingService {
     await newClothing.save();
 
     const subscribers = await this.newsletter.find({});
-    const emailList = subscribers.map((subscribe) => subscribe.email);
-
-    await this.emailService.sendNewsletter(
-      emailList,
-      clothingData.name as string
-    );
+    if (subscribers.length > 0) {
+      const emailList = subscribers.map((subscribe) => subscribe.email);
+      await this.emailService.sendNewsletter(
+        emailList,
+        clothingData.name as string
+      );
+    }
 
     return { newClothing };
   }
