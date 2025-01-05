@@ -31,7 +31,7 @@ export class QueryBuilder {
       this.filterQuery.$or = [
         { name: { $regex: this.search, $options: "i" } },
         { phoneNumber: { $regex: this.search, $options: "i" } },
-        { textileName: { $regex: this.search, $options: "i" } }
+        { material: { $regex: this.search, $options: "i" } }
       ];
     }
 
