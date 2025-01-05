@@ -229,11 +229,11 @@ class AuthenticationService {
   }
 
   public async loginWithGoogle(profile) {
-    let user = await this.user.findOne({ googleId: profile.id });
+    let user = await this.user.findOne({ googleId: profile.id });    
     if (!user) {
       user = await this.user.create({
         googleId: profile.id,
-        name: profile._json?.given_name,
+        username: profile._json?.given_name,
         email: profile._json?.email,
         isEmailConfirmed: profile._json?.email_verified,
         image: profile._json?.picture,
