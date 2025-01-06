@@ -6,6 +6,7 @@ import { validationMiddleware } from "../middleware/validation.middleware";
 import { UpdateUserDto } from "./user.dto";
 import userService from "./user.service";
 import { FileService } from "../s3/s3.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class UserController implements IController {
   public path: string = "/users";
@@ -20,15 +21,16 @@ export class UserController implements IController {
   }
 
   public initializeRoutes() {
-    this.router.get(`${this.path}/:id`, this.getUserById);
-    this.router.get(this.path, this.getAllUsers);
+    this.router.get(`${this.path}/:id`, authMiddleware, this.getUserById);
+    this.router.get(this.path, authMiddleware, this.getAllUsers);
     this.router.patch(
       `${this.path}/:id`,
+      authMiddleware,
       this.upload.single("image"),
       validationMiddleware(UpdateUserDto),
       this.updateUser
     );
-    this.router.delete(`${this.path}/:id`, this.deleteUser);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteUser);
   }
 
   private getUserById = async (

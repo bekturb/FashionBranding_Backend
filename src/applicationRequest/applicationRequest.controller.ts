@@ -7,6 +7,7 @@ import { validationMiddleware } from "../middleware/validation.middleware";
 import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
 import ApplicationRequestService from "./applicationRequest.service";
 import { FileService } from "../s3/s3.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class ApplicationRequestController implements IController {
   public path: string = "/application-request";
@@ -21,16 +22,16 @@ export class ApplicationRequestController implements IController {
   }
 
   public initializeRoutes() {
-    this.router.get(`${this.path}/:id`, this.getApplicationRequestById);
-    this.router.get(this.path, this.getAllApplicationRequests);
+    this.router.get(`${this.path}/:id`, authMiddleware, this.getApplicationRequestById);
+    this.router.get(this.path, authMiddleware, this.getAllApplicationRequests);
     this.router.post(
       this.path,
       this.upload.single("image"),
       validationMiddleware(CreateApplicationRequestDto),
       this.createApplicationRequest
     );
-    this.router.patch(`${this.path}/:id/seen`, this.updateApplicationRequest);
-    this.router.delete(`${this.path}/:id`, this.deleteApplicationRequest);
+    this.router.patch(`${this.path}/:id/seen`, authMiddleware, this.updateApplicationRequest);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteApplicationRequest);
   }
 
   private getApplicationRequestById = async (

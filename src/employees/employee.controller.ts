@@ -6,6 +6,7 @@ import { CreateEmployeeDto } from "./employee.dto";
 import { IEmployee } from "./employee.interface";
 import EmployeeService from "./employee.service";
 import { FileService } from "../s3/s3.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class EmployeeController implements IController {
   public path: string = "/employee";
@@ -20,21 +21,23 @@ export class EmployeeController implements IController {
   }
 
   public initializeRoutes(): void {
-    this.router.get(`${this.path}/:id`, this.getEmployeeById);
-    this.router.get(this.path, this.getAllEmployees);
+    this.router.get(`${this.path}/:id`, authMiddleware, this.getEmployeeById);
+    this.router.get(this.path, authMiddleware, this.getAllEmployees);
     this.router.post(
       this.path,
+      authMiddleware,
       this.upload.single("image"),
       validationMiddleware(CreateEmployeeDto),
       this.createEmployee
     );
     this.router.patch(
       `${this.path}/:id`,
+      authMiddleware,
       this.upload.single("image"),
       validationMiddleware(CreateEmployeeDto),
       this.updateEmployee
     );
-    this.router.delete(`${this.path}/:id`, this.deleteEmployee);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteEmployee);
   }
 
   private getEmployeeById = async (

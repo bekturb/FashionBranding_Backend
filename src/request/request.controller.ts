@@ -4,6 +4,7 @@ import { CreateRequestDto } from "./request.dto";
 import { IController } from "../interfaces/controller.interface";
 import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
 import RequestService from "./request.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class RequestController implements IController {
   public path: string = "/request";
@@ -20,12 +21,12 @@ export class RequestController implements IController {
       validationMiddleware(CreateRequestDto),
       this.createRequest
     );
-    this.router.get(this.path, this.getAllRequests);
-    this.router.get(`${this.path}/get-requests/chart`, this.getChartRquests);
-    this.router.get(`${this.path}/get-requests/by-week`, this.getWeekRequests);
-    this.router.get(`${this.path}/:id`, this.getRequestById);
-    this.router.delete(`${this.path}/:id`, this.deleteRequest);
-    this.router.patch(`${this.path}/:id/seen`, this.updateSeenStatus);
+    this.router.get(this.path, authMiddleware, this.getAllRequests);
+    this.router.get(`${this.path}/get-requests/chart`, authMiddleware, this.getChartRquests);
+    this.router.get(`${this.path}/get-requests/by-week`, authMiddleware, this.getWeekRequests);
+    this.router.get(`${this.path}/:id`, authMiddleware, this.getRequestById);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteRequest);
+    this.router.patch(`${this.path}/:id/seen`, authMiddleware, this.updateSeenStatus);
   }
 
   private createRequest = async (

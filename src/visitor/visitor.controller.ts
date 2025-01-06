@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { IController } from "../interfaces/controller.interface";
 import VisitorService from "./visitor.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class VisitorController implements IController {
   public path: string = "/visitor";
@@ -13,8 +14,8 @@ export class VisitorController implements IController {
 
   public initializeRoutes() {
     this.router.post(`${this.path}/track`, this.createVisitorTrack);
-    this.router.get(`${this.path}/compare-weeks`, this.getVisitorsCompareWeeks);
-    this.router.get(`${this.path}/chart-visitors`, this.getChartVisitors);
+    this.router.get(`${this.path}/compare-weeks`, authMiddleware, this.getVisitorsCompareWeeks);
+    this.router.get(`${this.path}/chart-visitors`, authMiddleware, this.getChartVisitors);
   }
 
   private createVisitorTrack: (

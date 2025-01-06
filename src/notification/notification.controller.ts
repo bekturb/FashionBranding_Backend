@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { IController } from '../interfaces/controller.interface';
 import NotificationService from './notification.service';
+import { authMiddleware } from '../middleware/auth';
 
 export class NotificationController implements IController {
   public path: string = '/notification';
@@ -12,8 +13,8 @@ export class NotificationController implements IController {
 	}
 
 	public initializeRoutes() {
-        this.router.get(this.path, this.getAllNotifications);
-        this.router.delete(`${this.path}/:id`, this.deleteNotification);
+        this.router.get(this.path, authMiddleware, this.getAllNotifications);
+        this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteNotification);
   }
 
   private getAllNotifications = async (

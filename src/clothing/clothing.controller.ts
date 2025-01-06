@@ -7,6 +7,7 @@ import { IClothing } from "./clothing.interface";
 import ClothingService from "./clothing.service";
 import { IRequestsQuery } from "interfaces/requestsQuery.interface";
 import { FileService } from "../s3/s3.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class ClothingController implements IController {
   public path = "/clothing";
@@ -25,22 +26,25 @@ export class ClothingController implements IController {
     this.router.get(this.path, this.getAllClothing);
     this.router.get(
       `${this.path}/get-clothing/by-chart`,
+      authMiddleware,
       this.getChartCollections
     );
-    this.router.get(`${this.path}/get-today/clothing`, this.getTodaysClothing);
+    this.router.get(`${this.path}/get-today/clothing`, authMiddleware, this.getTodaysClothing);
     this.router.post(
       this.path,
+      authMiddleware,
       this.upload.single("image"),
       validationMiddleware(CreateClothingDto),
       this.createClothing
     );
     this.router.patch(
       `${this.path}/:id`,
+      authMiddleware,
       this.upload.single("image"),
       validationMiddleware(UpdateClothingDto),
       this.updateClothing
     );
-    this.router.delete(`${this.path}/:id`, this.deleteClothing);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteClothing);
   }
 
   private getClothingById = async (

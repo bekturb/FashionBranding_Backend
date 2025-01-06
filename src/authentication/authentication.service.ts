@@ -285,12 +285,12 @@ class AuthenticationService {
     };
   }
 
-  public async resetUserPassword(resetPasswordData: ResetPasswordDto) {
-    const { email, oldPassword, password, confirmPassword } = resetPasswordData;
+  public async resetUserPassword(resetPasswordData: ResetPasswordDto, userId: string) {
+    const { oldPassword, password, confirmPassword } = resetPasswordData;
 
-    const user = await this.user.findOne({ email });
+    const user = await this.user.findById({ userId });
     if (!user) {
-      throw new NotFoundException("Пользователь с этим адресом электронной почты не найден.");
+      throw new NotFoundException("Пользователь с этим адресом не найден.");
     }
 
     const isPasswordMatching = await compareValue(
