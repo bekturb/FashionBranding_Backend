@@ -10,7 +10,6 @@ const requestSchema = new Schema<IRequest>({
   phoneNumber: {
     type: String,
     required: true,
-    unique: true,
   },
 
   type: {
