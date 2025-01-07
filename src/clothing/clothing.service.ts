@@ -21,7 +21,7 @@ class ClothingService {
     const clothing = await this.clothing.findById(id);
 
     if (!clothing) {
-      throw new ClothingNotFoundException(id);
+      throw new ClothingNotFoundException();
     }
 
     return { clothing };
@@ -193,7 +193,7 @@ class ClothingService {
     const existingClothing = await this.clothing.findById(id);
 
     if (!existingClothing) {
-      throw new NotFoundException(`Коллекция с ID #${id} не найдена.`);
+      throw new NotFoundException(`Коллекция не найдена.`);
     }
 
     let updatedImageUrl = existingClothing.image;
@@ -217,7 +217,7 @@ class ClothingService {
     const deletedClothing = await this.clothing.findByIdAndDelete(id);
 
     if (!deletedClothing) {
-      throw new ClothingNotFoundException(id);
+      throw new ClothingNotFoundException();
     }
 
     return { deletedClothing };

@@ -140,7 +140,7 @@ export class RequestController implements IController {
 
       const { request } = await this.requestService.updateRequestSeenStatus(id);
 
-      res.status(200).send({ request, message: "Успешно обновлено." });
+      res.status(200).send({ request, message: "Успешно обновлено!" });
     } catch (error) {
       next(error);
     }

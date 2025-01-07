@@ -35,7 +35,7 @@ export class NotificationController implements IController {
     try {
       const { id } = req.params;
       await this.notificationService.removeNotification(id)
-      res.status(204).send({message: "Уведомление успешно удалено."});
+      res.status(204).send({message: "Уведомление успешно удалено!"});
     } catch (err) {
       next(err);
     }

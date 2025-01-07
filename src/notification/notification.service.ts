@@ -13,7 +13,7 @@ class NotificationService {
   public async removeNotification(id: string) {
     const deletedNotification = await this.notification.findByIdAndDelete(id);
     if (!deletedNotification) {
-      throw new NotFoundException("Not found notifcation");
+      throw new NotFoundException("Уведомление не найдено!");
     }
 
     return { deletedNotification };

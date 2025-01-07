@@ -6,7 +6,6 @@ export class LogInDto {
 
   @IsOptional()
   @IsString()
-  @Length(8, 50)
   password?: string;
 
   @IsBoolean()

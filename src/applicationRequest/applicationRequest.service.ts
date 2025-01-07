@@ -18,7 +18,7 @@ class ApplicationRequestService {
   public async getApplicationRequest(id: string) {
     const applicationRequest = await this.applicationRequest.findById(id);
     if (!applicationRequest) {
-      throw new ApplicationRequestNotFoundException(id);
+      throw new ApplicationRequestNotFoundException();
     }
     return { applicationRequest };
   }
@@ -81,7 +81,7 @@ class ApplicationRequestService {
     });
 
     if (!request) {
-      throw new ApplicationRequestNotFoundException(id);
+      throw new ApplicationRequestNotFoundException();
     }
     return { request };
   }
@@ -90,7 +90,7 @@ class ApplicationRequestService {
     const deletedApplicationRequest =
       await this.applicationRequest.findByIdAndDelete(id);
     if (!deletedApplicationRequest) {
-      throw new ApplicationRequestNotFoundException(id);
+      throw new ApplicationRequestNotFoundException();
     }
 
     return { deletedApplicationRequest }

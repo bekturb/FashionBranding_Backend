@@ -12,7 +12,7 @@ class EmployeeService {
     const employee = await this.employee.findById(id);
 
     if (!employee) {
-      throw new NotFoundException(`Сотрудник с ID #${id} не найден.`);
+      throw new NotFoundException(`Сотрудник не найден.`);
     }
     return { employee };
   }
@@ -45,7 +45,7 @@ class EmployeeService {
     const existingEmployee = await this.employee.findById(id);
 
     if (!existingEmployee) {
-      throw new NotFoundException(`Сотрудник с ID #${id} не найден.`);
+      throw new NotFoundException(`Сотрудник не найден.`);
     }
 
     let updatedImageUrl = existingEmployee.image;
@@ -68,7 +68,7 @@ class EmployeeService {
   public async deleteEmployeeSvc(id: string) {
     const deletedEmployee = await this.employee.findByIdAndDelete(id);
     if (!deletedEmployee) {
-      throw new NotFoundException(`Сотрудник с ID #${id} не найден.`);
+      throw new NotFoundException(`Сотрудник не найден.`);
     }
     return { deletedEmployee };
   }

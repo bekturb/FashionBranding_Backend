@@ -185,7 +185,7 @@ export class ClothingController implements IController {
         await this.fileService.deleteFile(deletedClothing.image);
       }
 
-      res.status(200).send({ message: "Успешно удалено." });
+      res.status(200).send({ message: "Успешно удалено!" });
     } catch (err) {
       next(err);
     }

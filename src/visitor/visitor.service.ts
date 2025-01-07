@@ -19,7 +19,6 @@ class VisitorService {
       return {
         statusCode: 200,
         response: {
-          message: "Посетитель успешно обновлен.",
           visitor: existingVisitor,
         },
       };
@@ -36,7 +35,6 @@ class VisitorService {
     return {
       statusCode: 201,
       response: {
-        message: "Посетитель успешно отслежен.",
         visitor: newVisitor,
       },
     };

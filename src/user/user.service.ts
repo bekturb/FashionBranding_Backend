@@ -12,7 +12,7 @@ class userService {
   public async getUser(id: string) {
     const user = await this.user.findById(id);
     if (!user) {
-      throw new UserNotFoundException(id);
+      throw new UserNotFoundException();
     }
     return { user };
   }
@@ -30,7 +30,7 @@ class userService {
     const existingUser = await this.user.findById(id);
     
         if (!existingUser) {
-          throw new NotFoundException(`Пользователь с ID #${id} не найден.`);
+          throw new NotFoundException(`Пользователь не найден.`);
         }
     
         let updatedImageUrl = existingUser.image;
@@ -53,7 +53,7 @@ class userService {
   public async removeUser(id: string) {
     const deletedUser = await this.user.findByIdAndDelete(id);
     if (!deletedUser) {
-      throw new UserNotFoundException(id);
+      throw new UserNotFoundException();
     }
 
     return {deletedUser}

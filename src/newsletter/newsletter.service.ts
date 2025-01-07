@@ -11,7 +11,7 @@ class NewsletterService {
       email: newsletterData.email,
     });
     if (checkNewsletterEmail) {
-      throw new UserWithThatEmailAlreadyExistsException(newsletterData.email);
+      throw new UserWithThatEmailAlreadyExistsException();
     }
 
     const newNewsletter = new this.newsletter(newsletterData);

@@ -171,7 +171,7 @@ class RequestService {
     const request = await this.request.findById(id);
 
     if (!request) {
-      throw new ApplicationRequestNotFoundException(id);
+      throw new ApplicationRequestNotFoundException();
     }
     return { request };
   }
@@ -180,7 +180,7 @@ class RequestService {
     const request = await this.request.findByIdAndDelete(id);
 
     if (!request) {
-      throw new ApplicationRequestNotFoundException(id);
+      throw new ApplicationRequestNotFoundException();
     }
 
     return { request };
@@ -196,7 +196,7 @@ class RequestService {
     );
 
     if (!request) {
-      throw new ApplicationRequestNotFoundException(id);
+      throw new ApplicationRequestNotFoundException();
     }
 
     return { request };

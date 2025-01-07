@@ -136,7 +136,7 @@ export class EmployeeController implements IController {
         await this.fileService.deleteFile(deletedEmployee.image);
       }
 
-      res.status(204).send({ message: "Сотрудник успешно удален." });
+      res.status(204).send({ message: "Сотрудник успешно удален!" });
     } catch (err) {
       next(err);
     }

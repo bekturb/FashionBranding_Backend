@@ -49,7 +49,6 @@ export class VisitorController implements IController {
       const visitors = await this.visitorService.getWeeksVisitors();
 
       res.status(200).send({
-        message: "Еженедельное сравнение успешно получено.",
         data: visitors.data,
       });
     } catch (err) {
@@ -66,7 +65,6 @@ export class VisitorController implements IController {
       const { visitors } = await this.visitorService.getChartVisitorsByWeek();
 
       res.status(200).send({
-        message: "Еженедельное сравнение успешно получено.",
         data: visitors,
       });
     } catch (err) {
