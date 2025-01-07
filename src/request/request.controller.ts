@@ -1,16 +1,15 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { requestModel } from "./request.model";
 import { validationMiddleware } from "../middleware/validation.middleware";
 import { CreateRequestDto } from "./request.dto";
 import { IController } from "../interfaces/controller.interface";
 import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
-import { ApplicationRequestNotFoundException } from "../exceptions/applicationRequestNotFound.exception";
-import { QueryBuilder } from "../utils/queryBuilder";
+import RequestService from "./request.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class RequestController implements IController {
   public path: string = "/request";
   public router: Router = Router();
-  private request = requestModel;
+  public requestService = new RequestService();
 
   constructor() {
     this.initializeRoutes();
@@ -22,10 +21,12 @@ export class RequestController implements IController {
       validationMiddleware(CreateRequestDto),
       this.createRequest
     );
-    this.router.get(this.path, this.getAllRequests);
-    this.router.get(`${this.path}/:id`, this.getRequestById);
-    this.router.delete(`${this.path}/:id`, this.deleteRequest);
-    this.router.put(`${this.path}/:id/seen`, this.updateSeenStatus);
+    this.router.get(this.path, authMiddleware, this.getAllRequests);
+    this.router.get(`${this.path}/get-requests/chart`, authMiddleware, this.getChartRquests);
+    this.router.get(`${this.path}/get-requests/by-week`, authMiddleware, this.getWeekRequests);
+    this.router.get(`${this.path}/:id`, authMiddleware, this.getRequestById);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteRequest);
+    this.router.patch(`${this.path}/:id/seen`, authMiddleware, this.updateSeenStatus);
   }
 
   private createRequest = async (
@@ -35,10 +36,7 @@ export class RequestController implements IController {
   ) => {
     try {
       const requestData: CreateRequestDto = req.body;
-
-      const request = new this.request(requestData);
-      await request.save();
-
+      const { request } = await this.requestService.addRequest(requestData);
       res.status(201).send(request);
     } catch (err) {
       next(err);
@@ -51,21 +49,54 @@ export class RequestController implements IController {
     next: NextFunction
   ) => {
     try {
-      const queryBuilder = new QueryBuilder(req.query);
+      const requestQueries: IRequestsQuery = req.query;
 
-      const skip = queryBuilder.getSkip();
-      const limit = queryBuilder.getLimit();
-      const filters = queryBuilder.getFilters();
+      const { requests, total, page, limit } =
+        await this.requestService.getRequests(requestQueries);
 
-      const requests = await this.request
-        .find(filters)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
-      res.status(200).send(requests);
+      res.status(200).send({
+        data: requests,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (error) {
       next(error);
+    }
+  };
+
+  private getChartRquests = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { data } = await this.requestService.hanldeChartRequests();
+      res.status(200).send(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  private getWeekRequests = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { thisWeekData, lastWeekData, percentageChange } =
+        await this.requestService.handleWeekRequests();
+
+      res.status(200).send({
+        thisWeek: thisWeekData,
+        lastWeek: lastWeekData,
+        percentageChange: percentageChange.toFixed(2),
+      });
+    } catch (err) {
+      next(err);
     }
   };
 
@@ -77,11 +108,7 @@ export class RequestController implements IController {
     try {
       const { id } = req.params;
 
-      const request = await this.request.findById(id);
-
-      if (!request) {
-        next(new ApplicationRequestNotFoundException(id));
-      }
+      const { request } = await this.requestService.getRequest(id);
 
       res.send(request);
     } catch (err) {
@@ -96,13 +123,7 @@ export class RequestController implements IController {
   ) => {
     try {
       const { id } = req.params;
-
-      const request = await this.request.findByIdAndDelete(id);
-
-      if (!request) {
-        next(new ApplicationRequestNotFoundException(id));
-      }
-
+      const { request } = await this.requestService.removeRequest(id);
       res.status(204).send(request);
     } catch (err) {
       next(err);
@@ -116,20 +137,12 @@ export class RequestController implements IController {
   ) => {
     try {
       const { id } = req.params;
-      
-      const request = await this.request.findByIdAndUpdate(id, {
-        seen: true,
-      });
 
-      console.log(request, "id");
+      const { request } = await this.requestService.updateRequestSeenStatus(id);
 
-      if (!request) {
-        next(new ApplicationRequestNotFoundException(id));
-      }
-
-      res.status(200).send({message: "Updated successfully"});
+      res.status(200).send({ request, message: "Успешно обновлено!" });
     } catch (error) {
-      next(error)
+      next(error);
     }
   };
 }

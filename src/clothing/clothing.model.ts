@@ -1,4 +1,4 @@
-import mongoose, { model, Schema } from 'mongoose';
+import { model, Schema } from 'mongoose';
 import { IClothing } from './clothing.interface';
 
 const clothingSchema = new Schema(
@@ -7,7 +7,9 @@ const clothingSchema = new Schema(
       type: String,
       required: true,
     },
-    image: String,
+    image: {
+      type: String,
+    },
     category: {
       type: String,
       required: true,
@@ -15,7 +17,7 @@ const clothingSchema = new Schema(
     material: String,
     description: String,
     creatorId: {
-      type: Object, //mongoose.Schema.Types.ObjectId,
+      type: Object,
       ref: 'Admin',
       required: true,
     },

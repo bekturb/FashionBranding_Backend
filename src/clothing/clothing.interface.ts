@@ -1,8 +1,9 @@
 export interface IClothing {
-  name: String;
-  image: String;
-  category: String;
-  material: String;
-  description: String;
+  name: string;
+  image: string;
+  category: string;
+  material: string;
+  description: string;
   creatorId: Object;
+  createdAt: Date
 }

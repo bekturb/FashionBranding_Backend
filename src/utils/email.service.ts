@@ -27,15 +27,28 @@ class EmailService {
       await this.transporter.sendMail({
         from: '"Your App Name" <no-reply@yourapp.com>',
         to: email,
-        subject: "Email Verification",
+        subject: "Подтверждение электронной почты",
         html: emailContent,
       });
-
     } catch (error) {
       throw new InternalServerErrorException(
-        `Failed to send verification email to ${email}. Please try again.`
+        `Не удалось отправить письмо для подтверждения на ${email}. Пожалуйста, попробуйте снова.`
       );
     }
+  }
+
+  public async sendNewsletter(
+    emailList: string[],
+    name: string
+  ): Promise<void> {
+    const emailContent = this.getNewsletterContent(name);
+
+    await this.transporter.sendMail({
+      from: '"Your App Name" <no-reply@yourapp.com>',
+      to: emailList.join(","),
+      subject: "Доступен новый товар одежды!",
+      html: emailContent,
+    });
   }
 
   public async sendVerificationOtp(
@@ -48,12 +61,12 @@ class EmailService {
       await this.transporter.sendMail({
         from: '"Your App Name" <no-reply@yourapp.com>',
         to: email,
-        subject: "Email Verification Otp Code",
+        subject: "Код OTP для подтверждения электронной почты",
         html: emailContent,
       });
     } catch (error) {
       throw new InternalServerErrorException(
-        `Failed to send verification email to ${email}. Please try again.`
+        `Не удалось отправить письмо для подтверждения на ${email}. Пожалуйста, попробуйте снова.`
       );
     }
   }
@@ -68,12 +81,12 @@ class EmailService {
       await this.transporter.sendMail({
         from: '"Your App Name" <no-reply@yourapp.com>',
         to: email,
-        subject: "Email Verification Otp Code",
+        subject: "Код OTP для подтверждения электронной почты.",
         html: emailContent,
       });
     } catch (error) {
       throw new InternalServerErrorException(
-        `Failed to send verification email to ${email}. Please try again.`
+        `Не удалось отправить письмо для подтверждения на ${email}. Пожалуйста, попробуйте снова.`
       );
     }
   }
@@ -81,8 +94,8 @@ class EmailService {
   private getVerificationEmailContent(verificationLink: string): string {
     return `
           <div style="font-family: Arial, sans-serif; line-height: 1.5; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #007bff;">Welcome to Our App!</h2>
-            <p>Please verify your email by clicking the button below:</p>
+            <h2 style="color: #007bff;">Добро пожаловать в наше приложение Fashion-Branding!</h2>
+            <p>Пожалуйста, подтвердите ваш адрес электронной почты, кликнув по кнопке ниже:</p>
             <a href="${verificationLink}" style="
               display: inline-block; 
               padding: 10px 20px; 
@@ -90,19 +103,25 @@ class EmailService {
               background-color: #007bff; 
               text-decoration: none; 
               border-radius: 5px;
-            ">Verify Email</a>
-            <p style="margin-top: 20px;">If the button above doesn't work, copy and paste this link into your browser:</p>
+            ">Подтвердить электронную почту</a>
+            <p style="margin-top: 20px;">Если кнопка выше не работает, скопируйте и вставьте эту ссылку в адресную строку вашего браузера:</p>
             <p><a href="${verificationLink}" style="color: #007bff;">${verificationLink}</a></p>
-            <p>Thank you for joining us!</p>
+            <p>Спасибо, что присоединились к нам!</p>
           </div>
+        `;
+  }
+
+  private getNewsletterContent(name: string): string {
+    return `
+         <p>Посмотрите наш новый товар одежды: <strong>${name}</strong></p>
         `;
   }
 
   private getResetPasswordContent(verificationLink: string): string {
     return `
           <div style="font-family: Arial, sans-serif; line-height: 1.5; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #007bff;">Welcome to Our App!</h2>
-            <p>Please reset your password by clicking the button below:</p>
+            <h2 style="color: #007bff;">Добро пожаловать в наше приложение Fashion-Branding!</h2>
+            <p>Пожалуйста, сбросьте ваш пароль, кликнув по кнопке ниже:</p>
             <a href="${verificationLink}" style="
               display: inline-block; 
               padding: 10px 20px; 
@@ -110,10 +129,10 @@ class EmailService {
               background-color: #007bff; 
               text-decoration: none; 
               border-radius: 5px;
-            ">Verify Email</a>
-            <p style="margin-top: 20px;">If the button above doesn't work, copy and paste this link into your browser:</p>
+            ">Подтвердить электронную почту</a>
+            <p style="margin-top: 20px;">Если кнопка выше не работает, скопируйте и вставьте эту ссылку в адресную строку вашего браузера:</p>
             <p><a href="${verificationLink}" style="color: #007bff;">${verificationLink}</a></p>
-            <p>Thank you for joining us!</p>
+            <p>Спасибо, что присоединились к нам!</p>
           </div>
         `;
   }
@@ -121,10 +140,10 @@ class EmailService {
   private getVerificationOtpContent(otpCode: string): string {
     return `
           <div style="font-family: Arial, sans-serif; line-height: 1.5; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #007bff;">Welcome to Our App!</h2>
+            <h2 style="color: #007bff;">Добро пожаловать в наше приложение Fashion-Branding!</h2>
             <p>Please verify your email by the otp code below:</p>
               <div>${otpCode}</div>
-            <p>Thank you for joining us!</p>
+            <p>Спасибо, что присоединились к нам!</p>
           </div>
         `;
   }

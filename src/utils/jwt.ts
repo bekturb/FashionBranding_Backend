@@ -4,7 +4,7 @@ import {UserRole} from "../user/enum/role.enum";
 import DataStoredInToken from "interfaces/dataStoredInToken";
 
 const defaults: SignOptions = {
-  audience: [UserRole.GUEST],
+  audience: [UserRole.ADMIN],
 };
 
 class TokenManager {
@@ -13,8 +13,13 @@ class TokenManager {
     secret: process.env.JWT_SECRET,
   };
 
-  public refreshTokenSignOptions: SignOptions & { secret: string } = {
+  public rememberRefreshTokenSignOptions: SignOptions & { secret: string } = {
     expiresIn: "30d",
+    secret: process.env.JWT_REFRESH_SECRET,
+  };
+
+  public refreshTokenSignOptions: SignOptions & { secret: string } = {
+    expiresIn: "7d",
     secret: process.env.JWT_REFRESH_SECRET,
   };
 
@@ -47,7 +52,7 @@ class TokenManager {
     });
 
     if (error || !payload) {
-      return { error: "Invalid or expired refresh token" };
+      return { error: "Неверный или истекший токен обновления." };
     }
 
     const newAccessToken = this.signToken(

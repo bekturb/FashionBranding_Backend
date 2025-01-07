@@ -5,10 +5,7 @@ export class CreateClothingDto {
   @IsNotEmpty()
   public name: string;
 
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  public image: string;
+  public image: Express.Multer.File;
 
   @IsString()
   @IsNotEmpty()
@@ -29,10 +26,7 @@ export class UpdateClothingDto {
   @IsOptional()
   public name: string;
 
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  public image: string;
+  public image: Express.Multer.File;
 
   @IsString()
   @IsNotEmpty()

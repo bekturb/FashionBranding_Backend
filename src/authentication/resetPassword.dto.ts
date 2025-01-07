@@ -6,7 +6,6 @@ export class ResetPasswordDto {
 
   @IsOptional()
   @IsString()
-  @Length(8, 50)
   oldPassword?: string;
 
   @IsOptional()

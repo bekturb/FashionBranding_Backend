@@ -1,7 +1,6 @@
 import { UserWithThatEmailAlreadyExistsException } from "../exceptions/userWithThatEmailAlreadyExists.exception";
 import { NotFoundException } from "../exceptions/notfound.exception";
 import { UserNotFoundException } from "../exceptions/userNotFound.exception";
-import { WrongCredentialsException } from "../exceptions/wrongCredentials.exception";
 import { CreateUserDto } from "../user/user.dto";
 import { LogInDto } from "./login.dto";
 import { ResetPasswordDto } from "./resetPassword.dto";
@@ -15,23 +14,31 @@ import TokenManager from "../utils/jwt";
 import VerificationCode from "./enum/verificationCode.enum";
 import DataStoredInToken from "../interfaces/dataStoredInToken";
 import VerificationsService from "./verifications.service";
-import EmailService from "./email.service";
-import { NextFunction, Response } from "express";
+import EmailService from "../utils/email.service";
+import { IUser } from "../user/user.interface";
 
 class AuthenticationService {
   public user = userModel;
   public verificationCode = verificationCodeModel;
-  private emailService = new EmailService();
+  public emailService = new EmailService();
   public verificationService = new VerificationsService();
-  private tokenManager = new TokenManager();
-  private otp = otpCodeModel;
+  public tokenManager = new TokenManager();
+  public otp = otpCodeModel;
   public;
 
+  public async getMe(userId: string) {
+    const user = await this.user.findById(userId);
+    return { user };
+  }
+
   public async register(userData: CreateUserDto) {
-    if (await this.user.findOne({ email: userData.email })) {
-      throw new UserWithThatEmailAlreadyExistsException(userData.email);
+
+    const {email, password, rememberMe} = userData;
+
+    if (await this.user.findOne({ email: email })) {
+      throw new UserWithThatEmailAlreadyExistsException();
     }
-    const hashedPassword = await hashValue(userData.password);
+    const hashedPassword = await hashValue(password);
     const user = await this.user.create({
       ...userData,
       password: hashedPassword,
@@ -43,7 +50,7 @@ class AuthenticationService {
       expiresAt: oneYearFromNow(),
     });
 
-    const url = `${process.env.APP_URL}auth/email/verify/${verificationCode._id}`;
+    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}?rememberMe=${rememberMe}`;
 
     await this.emailService.sendVerificationEmail(user.email, url);
     return {
@@ -51,10 +58,7 @@ class AuthenticationService {
     };
   }
 
-  public async firstStepVerification(
-    verificationId: string,
-    next: NextFunction
-  ) {
+  public async firstStepVerification(verificationId: string) {
     const validCode = await this.verificationCode.findOne({
       _id: verificationId,
       type: VerificationCode.EmailVerification,
@@ -62,12 +66,24 @@ class AuthenticationService {
     });
 
     if (!validCode) {
-      next(new NotFoundException("Invalid or expired verification code"));
+      return {
+        redirect: `${
+          process.env.APP_FRONT_URL
+        }/verification-error?message=${encodeURIComponent(
+          "Неверный или истекший код подтверждения"
+        )}`,
+      };
     }
 
     const user = await this.user.findById(validCode.userId);
     if (!user) {
-      next(new UserNotFoundException(String(validCode.userId)));
+      return {
+        redirect: `${
+          process.env.APP_FRONT_URL
+        }/verification-error?message=${encodeURIComponent(
+          `Пользователь не найден`
+        )}`,
+      };
     }
 
     const otp = await this.verificationService.generateOtpCode(user);
@@ -80,19 +96,15 @@ class AuthenticationService {
     };
   }
 
-  public async secondStepVerification(
-    email: string,
-    otpCode: string,
-    next: NextFunction
-  ) {
+  public async secondStepVerification(email: string, otpCode: string, rememberMe: boolean = false) {
     const storedOtp = await this.otp.findOne({ email });
     if (!storedOtp || new Date() > storedOtp.expiresAt) {
-      next(new NotFoundException("Invalid or expired OTP code"));
+      throw new NotFoundException("Неверный или истекший код OTP");
     }
 
     const isValidOtp = await compareValue(otpCode, storedOtp.otp);
     if (!isValidOtp) {
-      next(new NotFoundException("Invalid OTP"));
+      throw new NotFoundException("Неверный OTP код");
     }
 
     const user = await this.user.findOneAndUpdate(
@@ -100,15 +112,15 @@ class AuthenticationService {
       { isEmailConfirmed: true },
       { new: true }
     );
-   
+
     if (!user) {
-      next(new NotFoundException("User not found"));
+      throw new NotFoundException("Пользователь не найден");
     }
     const refreshToken = this.tokenManager.signToken(
       {
         userId: user._id,
       },
-      this.tokenManager.refreshTokenSignOptions
+      rememberMe ? this.tokenManager.rememberRefreshTokenSignOptions : this.tokenManager.refreshTokenSignOptions
     );
 
     const accessToken = this.tokenManager.signToken({
@@ -124,41 +136,7 @@ class AuthenticationService {
     };
   }
 
-  public async login(
-    logInData: LogInDto,
-    response: Response,
-    next: NextFunction
-  ) {
-    const user = await this.user.findOne({ email: logInData.email });
-
-    if (!user) {
-      next(new WrongCredentialsException());
-    }
-
-    const isPasswordMatching = await compareValue(
-      logInData.password,
-      user.get("password", null, { getters: false })
-    );
-
-    if (!isPasswordMatching) {
-      next(new NotFoundException("Incorrect password. Please try again."));
-    }
-
-    if (!user.isEmailConfirmed) {
-      const verificationCode = await this.verificationCode.create({
-        userId: user._id,
-        type: VerificationCode.EmailVerification,
-        expiresAt: oneYearFromNow(),
-      });
-      const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
-
-      await this.emailService.sendVerificationEmail(user.email, url);
-
-      response.status(403).send({
-        message: `User is not verified. A new verification email has been sent to ${user.email}.`,
-      });
-    }
-
+  public async googleCbHandler(user: IUser) {
     const refreshToken = this.tokenManager.signToken(
       {
         userId: user._id,
@@ -170,31 +148,125 @@ class AuthenticationService {
       userId: user._id,
     });
 
-    return { accessToken, refreshToken, user }
+    return { refreshToken, accessToken }
   }
 
-  public async refreshUserAccesToken (refreshToken: string, next: NextFunction){
-    if (!refreshToken) {
-      next(new NotFoundException("Refresh token is missing."));
+  public async handleResendCode(email: string) {
+    const user = await this.user.findOne({ email });
+
+    if (!user) {
+      throw new NotFoundException("Пользователь с данным e-mail не найден");
     }
 
-    const { payload, error } =
-      this.tokenManager.verifyToken<DataStoredInToken>(refreshToken, {
-        secret: this.tokenManager.refreshTokenSignOptions.secret,
+    await this.verificationCode.findOneAndDelete({
+      userId: user._id,
+      type: VerificationCode.EmailVerification,
+    });
+
+    const verificationCode = await this.verificationCode.create({
+      userId: user._id,
+      type: VerificationCode.EmailVerification,
+      expiresAt: oneYearFromNow(),
+    });
+
+    const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}`;
+
+    await this.emailService.sendVerificationEmail(user.email, url);
+
+    return {
+      user,
+    };
+  }
+
+  public async login(logInData: LogInDto) {
+
+    const {email, password, rememberMe} = logInData
+
+    const user = await this.user.findOne({ email: email });
+
+    if (!user) {
+      throw new NotFoundException("Пользователь с данным e-mail не найден");
+    }
+
+    const isPasswordMatching = await compareValue(
+      password,
+      user.get("password", null, { getters: false })
+    );
+
+    if (!isPasswordMatching) {
+      throw new NotFoundException("Неверный пароль. Пожалуйста, попробуйте снова!");
+    }
+
+    if (!user.isEmailConfirmed) {
+      const verificationCode = await this.verificationCode.create({
+        userId: user._id,
+        type: VerificationCode.EmailVerification,
+        expiresAt: oneYearFromNow(),
       });
+      const url = `${process.env.APP_URL}/auth/email/verify/${verificationCode._id}?rememberMe=${rememberMe}`;
+
+      await this.emailService.sendVerificationEmail(user.email, url);
+
+      return {
+        user,
+        message: `Пользователь еще не подтвержден. Новое письмо для подтверждения отправлено на ваш e-mail`,
+        status: 403
+      };
+    }
+
+    const refreshToken = this.tokenManager.signToken(
+      {
+        userId: user._id,
+      },
+      rememberMe ? this.tokenManager.rememberRefreshTokenSignOptions : this.tokenManager.refreshTokenSignOptions
+    );
+
+    const accessToken = this.tokenManager.signToken({
+      userId: user._id,
+    });
+
+    return { accessToken, refreshToken, user, message: "Вы вошли в систему!", status: 200};
+  }
+
+  public async loginWithGoogle(profile) {
+    let user = await this.user.findOne({ googleId: profile.id });    
+    if (!user) {
+      user = await this.user.create({
+        googleId: profile.id,
+        username: profile._json?.given_name,
+        email: profile._json?.email,
+        isEmailConfirmed: profile._json?.email_verified,
+        image: profile._json?.picture,
+      });
+    }
+    return { user };
+  }
+
+  public async refreshUserAccesToken(refreshToken: string | undefined, rememberMe: boolean) {
+    
+    if (!refreshToken) {
+      throw new NotFoundException("Токен отсутствует. Снова войдите в систему!");
+    }
+
+    const { payload, error } = this.tokenManager.verifyToken<DataStoredInToken>(
+      refreshToken,
+      {
+        secret: this.tokenManager.refreshTokenSignOptions.secret,
+      }
+    );
 
     if (error) {
-      next(new NotFoundException("Invalid or expired refresh token."));
+      throw new NotFoundException("Неверный или истекший токен. Снова войдите в систему!");
     }
 
     if (!payload) {
-      next(new NotFoundException("Invalid token payload."));
+      throw new NotFoundException("Неверная нагрузка токена. Снова войдите в систему!");
     }
 
     const userId = payload.userId;
     const user = await this.user.findById(userId);
     if (!user) {
-      next(new UserNotFoundException(userId));
+      throw new NotFoundException("Пользователь не найден");
     }
 
     const newAccessToken = this.tokenManager.signToken(
@@ -204,78 +276,79 @@ class AuthenticationService {
 
     const newRefreshToken = this.tokenManager.signToken(
       { userId: user._id },
-      this.tokenManager.refreshTokenSignOptions
+      refreshToken ? this.tokenManager.rememberRefreshTokenSignOptions : this.tokenManager.refreshTokenSignOptions
     );
 
     return {
       newAccessToken,
-      newRefreshToken
+      newRefreshToken,
+    };
+  }
+
+  public async resetUserPassword(resetPasswordData: ResetPasswordDto, userId: string) {
+    const { oldPassword, password, confirmPassword } = resetPasswordData;
+
+    const user = await this.user.findById({ userId });
+    if (!user) {
+      throw new NotFoundException("Пользователь с данным e-mail не найден.");
     }
+
+    const isPasswordMatching = await compareValue(
+      oldPassword,
+      user.get("password", null, { getters: false })
+    );
+
+    if (!isPasswordMatching) {
+      throw new NotFoundException("Неверный пароль.");
+    }
+
+    if (password !== confirmPassword) {
+      throw new NotFoundException("Пароли не совпадают.");
+    }
+
+    user.password = await hashValue(password);
+    await user.save();
   }
 
-  public async resetUserPassword (resetPasswordData: ResetPasswordDto, next: NextFunction, ){
-
-    const {email, oldPassword, password, confirmPassword} = resetPasswordData;
-
-    const user = await this.user.findOne({ email });
-      if (!user) {
-        next(new NotFoundException("User not found with this email"));
-      }
-
-      const isPasswordMatching = await compareValue(
-        oldPassword,
-        user.get("password", null, { getters: false })
-      );
-
-      if (!isPasswordMatching) {
-        next(new NotFoundException("Incorrect old password"));
-      }
-
-      if (password !== confirmPassword) {
-        next(new NotFoundException("Passwords do not match"));
-      }
-
-      user.password = await hashValue(password);
-      await user.save();
-  }
-
-  public async sendPasswordResetUrl (forgetPasswordData: ForgetPasswordDto, next){
+  public async sendPasswordResetUrl(forgetPasswordData: ForgetPasswordDto) {
     const { email } = forgetPasswordData;
 
     const user = await this.user.findOne({ email });
-      if (!user) next(new NotFoundException("User not found with this email"));
+    if (!user) {
+      throw new NotFoundException("Пользователь с данным e-mail не найден.");
+    }
 
-      const recentRequest = await this.verificationCode.countDocuments({
-        userId: user._id,
-        type: VerificationCode.PasswordReset,
-        createdAt: { $gt: fiveMinutesAgo() },
-      });
+    const recentRequest = await this.verificationCode.countDocuments({
+      userId: user._id,
+      type: VerificationCode.PasswordReset,
+      createdAt: { $gt: fiveMinutesAgo() },
+    });
 
-      if (recentRequest >= 1) {
-        next(
-          new NotFoundException("Too many requests, please try again later")
-        );
-      }
+    if (recentRequest >= 1) {
+      throw new NotFoundException("Слишком много попыток, пожалуйста, попробуйте позже!");
+    }
 
-      const expiresAt = oneHourFromNow();
-      const verificationCode = await this.verificationCode.create({
-        userId: user._id,
-        type: VerificationCode.PasswordReset,
-        expiresAt,
-      });
+    const expiresAt = oneHourFromNow();
+    const verificationCode = await this.verificationCode.create({
+      userId: user._id,
+      type: VerificationCode.PasswordReset,
+      expiresAt,
+    });
 
-      const url = `${process.env.APP_URL}/password/reset?code=${
-        verificationCode._id
-      }&exp=${expiresAt.getTime()}`;
-      await this.emailService.sendResetPassworUrl(user.email, url);
+    const url = `${process.env.APP_FRONT_URL}/newForgetPassword?code=${
+      verificationCode._id
+    }&exp=${expiresAt.getTime()}`;
+    await this.emailService.sendResetPassworUrl(user.email, url);
 
-      return {
-        user
-      }
+    return {
+      user,
+    };
   }
 
-  public async resetForgetPassword (resetForgotenPasswordData: ResetForgotenPasswordDto, next: NextFunction){
-          const { verificationCode, password } = resetForgotenPasswordData;
+  public async resetForgetPassword(
+    resetForgotenPasswordData: ResetForgotenPasswordDto
+  ) {
+    const { verificationCode, password } = resetForgotenPasswordData;
 
     const validCode = await this.verificationCode.findOne({
       _id: verificationCode,
@@ -284,7 +357,7 @@ class AuthenticationService {
     });
 
     if (!validCode) {
-      next(new NotFoundException("Invalid or expired verification code"));
+      throw new NotFoundException("Неверный или истекший код подтверждения");
     }
 
     const hashedPassword = await hashValue(password);
@@ -294,7 +367,7 @@ class AuthenticationService {
     });
 
     if (!updatedUser) {
-      next(new NotFoundException("User not found or password reset failed"));
+      throw new UserNotFoundException();
     }
 
     await validCode.deleteOne();

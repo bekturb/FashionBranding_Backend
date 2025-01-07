@@ -10,16 +10,18 @@ export class QueryBuilder {
   private startDate?: Date;
   private endDate?: Date;
   private type?: string;
+  private category?: string;
   private filterQuery: FilterQuery<IRequest> = {};
 
   constructor(query: IRequestsQuery) {
-    this.page = Math.max(parseInt(query.page || "1", 10), 1);
-    this.limit = Math.max(parseInt(query.limit || "10", 10), 1);
-    this.skip = (this.page - 1) * this.limit;
+    this.page = query.page ? Math.max(parseInt(query.page, 10), 1) : undefined;
+    this.limit = query.limit ? Math.max(parseInt(query.limit, 10), 1) : undefined;
+    this.skip = this.page && this.limit ? (this.page - 1) * this.limit : 0;
     this.search = query.search?.trim() || "";
     this.startDate = query.startDate ? new Date(query.startDate) : undefined;
     this.endDate = query.endDate ? new Date(query.endDate) : undefined;
     this.type = query.type;
+    this.category = query.category;
 
     this.buildFilters();
   }
@@ -29,8 +31,12 @@ export class QueryBuilder {
       this.filterQuery.$or = [
         { name: { $regex: this.search, $options: "i" } },
         { phoneNumber: { $regex: this.search, $options: "i" } },
-        { textileName: { $regex: this.search, $options: "i" } }
+        { material: { $regex: this.search, $options: "i" } }
       ];
+    }
+
+    if (this.category) {
+      this.filterQuery.category = {$regex: new RegExp(`^${this.category}$`, 'i')}
     }
 
     if (

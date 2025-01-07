@@ -5,6 +5,7 @@ export interface IRequestsQuery {
     limit?: string;
     search?: string;
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    category?: string,
     type?: Request
   }

@@ -1,39 +1,49 @@
-import { NextFunction, Request, Response, Router } from 'express';
-import { IController } from '../interfaces/controller.interface';
-import { IApplicationRequest } from './applicationRequest.interface';
-import { applicationRequestModel } from './applicationRequest.model';
-import { ApplicationRequestNotFoundException } from '../exceptions/applicationRequestNotFound.exception';
-import { CreateApplicationRequestDto, UpdateApplicationRequestDto } from './applicationRequest.dto';
-import { validationMiddleware } from '../middleware/validation.middleware';
-import { IRequestsQuery } from '../interfaces/requestsQuery.interface';
-import { QueryBuilder } from '../utils/queryBuilder';
+import { NextFunction, Request, Response, Router } from "express";
+import * as multer from "multer";
+import { IController } from "../interfaces/controller.interface";
+import { IApplicationRequest } from "./applicationRequest.interface";
+import { CreateApplicationRequestDto } from "./applicationRequest.dto";
+import { validationMiddleware } from "../middleware/validation.middleware";
+import { IRequestsQuery } from "../interfaces/requestsQuery.interface";
+import ApplicationRequestService from "./applicationRequest.service";
+import { FileService } from "../s3/s3.service";
+import { authMiddleware } from "../middleware/auth";
 
 export class ApplicationRequestController implements IController {
-  public path: string = '/application-request';
+  public path: string = "/application-request";
   public router: Router = Router();
-	private applicationRequest = applicationRequestModel;
+  public fileService = new FileService();
+  public applicationRequestService = new ApplicationRequestService();
+  private upload: multer.Multer;
 
-	constructor() {
-		this.initializeRoutes();
-	}
-
-	public initializeRoutes() {
-    this.router.get(`${this.path}/:id`, this.getApplicationRequestById);
-    this.router.get(this.path, this.getAllApplicationRequests);
-    this.router.post(this.path, validationMiddleware(CreateApplicationRequestDto), this.createApplicationRequest);
-    this.router.patch(`${this.path}/:id`, validationMiddleware(UpdateApplicationRequestDto), this.updateApplicationRequest);
-    this.router.delete(`${this.path}/:id`, this.deleteApplicationRequest);
+  constructor() {
+    this.upload = multer({ storage: multer.memoryStorage() });
+    this.initializeRoutes();
   }
 
-  private getApplicationRequestById = async (req: Request, res: Response, next: NextFunction) => {
+  public initializeRoutes() {
+    this.router.get(`${this.path}/:id`, authMiddleware, this.getApplicationRequestById);
+    this.router.get(this.path, authMiddleware, this.getAllApplicationRequests);
+    this.router.post(
+      this.path,
+      this.upload.single("image"),
+      validationMiddleware(CreateApplicationRequestDto),
+      this.createApplicationRequest
+    );
+    this.router.patch(`${this.path}/:id/seen`, authMiddleware, this.updateApplicationRequest);
+    this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteApplicationRequest);
+  }
+
+  private getApplicationRequestById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { id } = req.params;
 
-      const applicationRequest = await this.applicationRequest.findById(id);
-
-      if (!applicationRequest) {
-        return next(new ApplicationRequestNotFoundException(id));
-      }
+      const { applicationRequest } =
+        await this.applicationRequestService.getApplicationRequest(id);
 
       res.send(applicationRequest);
     } catch (err) {
@@ -47,64 +57,86 @@ export class ApplicationRequestController implements IController {
     next: NextFunction
   ) => {
     try {
-      const queryBuilder = new QueryBuilder(req.query);      
+      const requestQueries: IRequestsQuery = req.query;
 
-      const skip = queryBuilder.getSkip();
-      const limit = queryBuilder.getLimit();
-      const filters = queryBuilder.getFilters();
+      const { applicationRequests, total, page, limit } =
+        await this.applicationRequestService.getApplicationRequests(
+          requestQueries
+        );
 
-      const applicationRequests = await this.applicationRequest
-      .find(filters)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-      res.status(200).send(applicationRequests);
-      
+      res.status(200).send({
+        data: applicationRequests,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (err) {
       next(err);
     }
   };
 
-  private createApplicationRequest = async (req: Request, res: Response, next: NextFunction) => {
+  private createApplicationRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const applicationRequestData: IApplicationRequest = req.body;
-      const newApplicationRequest = new applicationRequestModel(applicationRequestData);
-      await newApplicationRequest.save();
+      const file = req.file;
+      let fileUrl;
 
+      if (file) {
+        fileUrl = await this.fileService.uploadFile(file);
+      }
+
+      const { newApplicationRequest } =
+        await this.applicationRequestService.createNewApplication(
+          applicationRequestData,
+          fileUrl
+        );
       res.status(201).send(newApplicationRequest);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private updateApplicationRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+
+      const { request } =
+        await this.applicationRequestService.updateApplicationReq(id);
+
+      res.status(200).send({ request, message: "Успешно обновлено!" });
     } catch (err) {
       next(err);
     }
   };
 
-  private updateApplicationRequest = async (req: Request, res: Response, next: NextFunction) => {
+  private deleteApplicationRequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const { id } = req.params;
+
     try {
-      const { id } = req.params;
-      const applicationRequestData: IApplicationRequest = req.body;
-
-      const updatedApplicationRequest = await this.applicationRequest.findByIdAndUpdate(id, applicationRequestData, { new: true });
-
-      if (!updatedApplicationRequest) {
-        return next(new ApplicationRequestNotFoundException(id));
+      const { deletedApplicationRequest } = await this.applicationRequestService.deleteApplicationReq(id);
+      if (deletedApplicationRequest.image) {
+        await this.fileService.deleteFile(deletedApplicationRequest.image);
       }
-      res.send(updatedApplicationRequest);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  private deleteApplicationRequest = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params;
-      const deletedApplicationRequest = await this.applicationRequest.findByIdAndDelete(id);
-      if (!deletedApplicationRequest) {
-        return next(new ApplicationRequestNotFoundException(id));
-      }
-      res.status(204).send();
+      res.status(204).send({
+        message: "Успешно удалено!",
+      });
     } catch (err) {
       next(err);
     }
   };
 }
- 

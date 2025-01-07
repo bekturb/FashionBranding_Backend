@@ -5,7 +5,6 @@ const employeeSchema = new Schema(
   {
     username: {
       type: String,
-      unique: true,
     },
     image: {
       type: String,
