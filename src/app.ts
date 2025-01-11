@@ -3,6 +3,7 @@ import * as express from "express";
 import * as cookieParser from "cookie-parser";
 import * as session from "express-session";
 import * as cors from "cors";
+import * as compression from "compression";
 import GoogleAuth from "./utils/googleAuth";
 import { IController } from "./interfaces/controller.interface";
 import { errorMiddleware } from "./middleware/error.middleware";
@@ -28,6 +29,7 @@ export class App {
   }
 
   private initializeMiddlewares() {
+    this.app.use(compression());
     this.app.use(cors(corsOptions));
     this.app.use(session({
       secret: "#$%^&%^&*I",
