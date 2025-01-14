@@ -9,11 +9,13 @@ import { EmployeeController } from "./employees/employee.controller";
 import { NotificationController } from "./notification/notification.controller";
 import { NewsletterController } from "./newsletter/newsletter.controller";
 import { VisitorController } from "./visitor/visitor.controller";
+import { BannerController } from "./banner/banner.controller";
 
 const app = new App([
   new AuthenticationController(),
   new UserController(),
   new ClothingController(),
+  new BannerController(),
   new RequestController(),
   new ApplicationRequestController(),
   new EmployeeController(),

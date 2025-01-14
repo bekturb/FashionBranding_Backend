@@ -15,6 +15,7 @@ export class NotificationController implements IController {
 	public initializeRoutes() {
         this.router.get(this.path, authMiddleware, this.getAllNotifications);
         this.router.delete(`${this.path}/:id`, authMiddleware, this.deleteNotification);
+        this.router.patch(`${this.path}/:id/seen`, authMiddleware, this.updateSeenStatus);
   }
 
   private getAllNotifications = async (
@@ -38,6 +39,22 @@ export class NotificationController implements IController {
       res.status(204).send({message: "Уведомление успешно удалено!"});
     } catch (err) {
       next(err);
+    }
+  };
+
+  private updateSeenStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+
+      const { request } = await this.notificationService.updateRequestSeenStatus(id);
+
+      res.status(200).send({ request, message: "Посмотрено!" });
+    } catch (error) {
+      next(error);
     }
   };
 }
