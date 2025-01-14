@@ -18,6 +18,22 @@ class NotificationService {
 
     return { deletedNotification };
   }
+
+  public async updateRequestSeenStatus(id: string) {
+      const request = await this.notification.findByIdAndUpdate(
+        id,
+        {
+          seen: true,
+        },
+        { new: true }
+      );
+  
+      if (!request) {
+        throw new NotFoundException("Уведомление не найдено!");
+      }
+  
+      return { request };
+    }
 }
 
 export default NotificationService;
