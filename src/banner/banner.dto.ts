@@ -1,4 +1,10 @@
-import { ArrayMinSize, IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 export class CreateBannerDto {
   @IsString()
@@ -10,11 +16,11 @@ export class CreateBannerDto {
   public description: string;
 
   @IsArray()
-  @ArrayMinSize(1, {message: "Требуется хотя бы одно  изображение"})
+  @ArrayMinSize(1, { message: "Требуется хотя бы одно  изображение" })
   public leftImages: Express.Multer.File[];
 
   @IsArray()
-  @ArrayMinSize(1, {message: "Требуется хотя бы одно изображение"})
+  @ArrayMinSize(1, { message: "Требуется хотя бы одно изображение" })
   public rightImages: Express.Multer.File[];
 
   @IsString()
@@ -39,12 +45,12 @@ export class UpdateBannerDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1, {message: "Требуется хотя бы одно изображение"})
+  @ArrayMinSize(1, { message: "Требуется хотя бы одно изображение" })
   public leftImages: Express.Multer.File[];
 
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1, {message: "Требуется хотя бы одно изображение"})
+  @ArrayMinSize(1, { message: "Требуется хотя бы одно изображение" })
   public rightImages: Express.Multer.File[];
 
   @IsOptional()

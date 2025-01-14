@@ -22,24 +22,26 @@ export class BannerController implements IController {
   }
 
   public initializeRoutes() {
-    this.router.get(`${this.path}/:id`, authMiddleware, this.getBannerById);
+    this.router.get(`${this.path}/:id`, this.getBannerById);
     this.router.get(this.path, this.getAllBanner);
     this.router.post(
       this.path,
+      authMiddleware,
       this.upload.fields([
-        { name: "leftImages", maxCount: 3 },
-        { name: "rightImages", maxCount: 1 },
+        { name: "leftImages"},
+        { name: "rightImages"},
       ]),
       validationMiddleware(CreateBannerDto, ["leftImages", "rightImages"]),
       this.createBanner
     ),
       this.router.patch(
         `${this.path}/:id`,
+        authMiddleware,
         this.upload.fields([
-        { name: "leftImages", maxCount: 3 },
-        { name: "rightImages", maxCount: 1 },
-      ]),
-      validationMiddleware(UpdateBannerDto, ["leftImages", "rightImages"]),
+          { name: "leftImages"},
+          { name: "rightImages"},
+        ]),
+        validationMiddleware(UpdateBannerDto, ["leftImages", "rightImages"]),
         this.updateBanner
       );
   }
@@ -80,8 +82,12 @@ export class BannerController implements IController {
       const leftImages = req.files["leftImages"];
       const rightImages = req.files["rightImages"];
 
-      const leftFileUrls = await this.fileService.uploadMultipleFiles(leftImages);
-      const rightFileUrls = await this.fileService.uploadMultipleFiles(rightImages);
+      const leftFileUrls = await this.fileService.uploadMultipleFiles(
+        leftImages
+      );
+      const rightFileUrls = await this.fileService.uploadMultipleFiles(
+        rightImages
+      );
 
       const { newBanner } = await this.bannerService.createNewBanner(
         bannerData,
@@ -89,7 +95,7 @@ export class BannerController implements IController {
         rightFileUrls
       );
 
-      res.status(201).send( newBanner );
+      res.status(201).send(newBanner);
     } catch (error) {
       next(error);
     }
@@ -104,10 +110,15 @@ export class BannerController implements IController {
       const { id } = req.params;
       const bannerData: IBanner = req.body;
       const leftImages = req.files["leftImages"];
-      const rightImages = req.files["rightImages"]; 
-      
-     const { updatedBanner } = await this.bannerService.updateBanner(id, bannerData, leftImages, rightImages)
-        
+      const rightImages = req.files["rightImages"];
+
+      const { updatedBanner } = await this.bannerService.updateBanner(
+        id,
+        bannerData,
+        leftImages,
+        rightImages
+      );
+
       res.status(201).send(updatedBanner);
     } catch (error) {
       next(error);
