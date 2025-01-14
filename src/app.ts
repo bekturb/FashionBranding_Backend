@@ -30,8 +30,8 @@ export class App {
   }
 
   private initializeMiddlewares() {
+    this.app.use(helmet.default());
     this.app.use(compression());
-    this.app.use(helmet());
     this.app.use(cors(corsOptions));
     this.app.use(session({
       secret: "#$%^&%^&*I",
